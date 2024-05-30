@@ -11,9 +11,16 @@ use utoipa::ToSchema;
 pub enum ErrorVerbosity {
     /// Server returns an empty response with [`StatusCode::NO_CONTENT`] for all errors.
     None,
-    /// Server returns the error type as a JSON response with the appropriate status code.
+    /// Server returns only the error type as a JSON response with the appropriate status code.
     Type,
     // TODO: Add more verbosity levels
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+// TODO: this one should be returned and not the error itself
+struct ApiErrorResponse {
+    err: ApiError,
+    msg: &'static str,
 }
 
 #[derive(Debug, From, Serialize, ToSchema)]
