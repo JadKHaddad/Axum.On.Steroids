@@ -4,9 +4,10 @@ use axum::{
     Json,
 };
 use derive_more::From;
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
+use utoipa::ToSchema;
 
-#[derive(Debug, Serialize, Deserialize, From)]
+#[derive(Debug, From, Serialize, ToSchema)]
 #[serde(tag = "error_type", content = "error")]
 /// API error
 pub enum ApiError {
@@ -24,7 +25,7 @@ impl IntoResponse for ApiError {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize)]
 pub struct InternalServerError;
 
 /// Convert every error that implements [`core::convert::Into<>`] [`anyhow::Error`] into an [`InternalServerError`].
