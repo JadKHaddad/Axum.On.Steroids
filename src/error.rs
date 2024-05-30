@@ -13,6 +13,8 @@ use utoipa::ToSchema;
 pub enum ApiError {
     /// Internal server error
     InternalServerError(InternalServerError),
+    /// Query error
+    Query(QueryError),
 }
 
 impl IntoResponse for ApiError {
@@ -21,6 +23,7 @@ impl IntoResponse for ApiError {
             ApiError::InternalServerError(_) => {
                 (StatusCode::INTERNAL_SERVER_ERROR, Json(self)).into_response()
             }
+            ApiError::Query(_) => (StatusCode::BAD_REQUEST, Json(self)).into_response(),
         }
     }
 }
@@ -40,4 +43,10 @@ where
 
         Self
     }
+}
+
+#[derive(Debug, Serialize)]
+pub struct QueryError {
+    pub(crate) query_error_reason: String,
+    pub(crate) query_expected_schema: String,
 }

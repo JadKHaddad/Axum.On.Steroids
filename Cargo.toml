@@ -36,3 +36,5 @@ dotenv = "0.15.0"
 derive_more = { version = "0.99.17", features = ["from"] }
 
 schemars = { version = "0.8.21" }
+
+serde_yaml = "0.9.34"
