@@ -6,7 +6,10 @@ use schemars::{schema_for, JsonSchema};
 use serde::de::DeserializeOwned;
 use std::fmt::Debug;
 
-use crate::error::{ApiError, BodyError, InternalServerError};
+use crate::{
+    error::{ApiError, BodyError, InternalServerError},
+    state::ApiState,
+};
 
 /// A Wrapper around [`axum::extract::Json`] that rejects with an [`ApiError`].
 ///
@@ -17,13 +20,13 @@ pub struct ApiJson<T>(pub T);
 impl<T, S> FromRequest<S> for ApiJson<T>
 where
     T: DeserializeOwned + JsonSchema + Debug + Send,
-    S: Send + Sync,
+    S: Send + Sync + ApiState,
 {
     type Rejection = ApiError;
 
-    #[tracing::instrument(name = "json", skip_all)]
-    async fn from_request(req: Request, _state: &S) -> Result<Self, Self::Rejection> {
-        let json = AxumJson::<T>::from_request(req, _state).await;
+    #[tracing::instrument(name = "json_extractor", skip_all)]
+    async fn from_request(req: Request, state: &S) -> Result<Self, Self::Rejection> {
+        let json = AxumJson::<T>::from_request(req, state).await;
 
         match json {
             Ok(json) => {
@@ -34,12 +37,15 @@ where
             Err(json_rejection) => {
                 tracing::warn!(rejection=?json_rejection, "Rejection");
 
+                let verbosity = state.error_verbosity();
+
                 let body_error_reason = json_rejection.body_text();
 
-                let body_expected_schema =
-                    serde_yaml::to_string(&schema_for!(T)).map_err(InternalServerError::from)?;
+                let body_expected_schema = serde_yaml::to_string(&schema_for!(T))
+                    .map_err(|err| InternalServerError::from_generic_error(verbosity, err))?;
 
                 Err(BodyError {
+                    verbosity,
                     body_error_reason,
                     body_expected_schema,
                 }

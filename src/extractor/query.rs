@@ -7,7 +7,10 @@ use schemars::{schema_for, JsonSchema};
 use serde::de::DeserializeOwned;
 use std::fmt::Debug;
 
-use crate::error::{ApiError, InternalServerError, QueryError};
+use crate::{
+    error::{ApiError, InternalServerError, QueryError},
+    state::ApiState,
+};
 
 /// A Wrapper around [`axum::extract::Query`] that rejects with an [`ApiError`].
 ///
@@ -18,13 +21,13 @@ pub struct ApiQuery<T>(pub T);
 impl<T, S> FromRequestParts<S> for ApiQuery<T>
 where
     T: DeserializeOwned + JsonSchema + Debug + Send,
-    S: Send + Sync,
+    S: Send + Sync + ApiState,
 {
     type Rejection = ApiError;
 
-    #[tracing::instrument(name = "query", skip_all)]
-    async fn from_request_parts(parts: &mut Parts, _state: &S) -> Result<Self, Self::Rejection> {
-        let query = AxumQuery::<T>::from_request_parts(parts, _state).await;
+    #[tracing::instrument(name = "query_extractor", skip_all)]
+    async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
+        let query = AxumQuery::<T>::from_request_parts(parts, state).await;
 
         match query {
             Ok(query) => {
@@ -35,12 +38,15 @@ where
             Err(query_rejection) => {
                 tracing::warn!(rejection=?query_rejection, "Rejection");
 
+                let verbosity = state.error_verbosity();
+
                 let query_error_reason = query_rejection.body_text();
 
-                let query_expected_schema =
-                    serde_yaml::to_string(&schema_for!(T)).map_err(InternalServerError::from)?;
+                let query_expected_schema = serde_yaml::to_string(&schema_for!(T))
+                    .map_err(|err| InternalServerError::from_generic_error(verbosity, err))?;
 
                 Err(QueryError {
+                    verbosity,
                     query_error_reason,
                     query_expected_schema,
                 }
