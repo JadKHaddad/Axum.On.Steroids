@@ -32,3 +32,5 @@ utoipa-redoc = { version = "4.0.0", features = ["axum"] }
 utoipa-rapidoc = { version = "4.0.0", features = ["axum"] }
 
 dotenv = "0.15.0"
+
+derive_more = { version = "0.99.17", features = ["from"] }
