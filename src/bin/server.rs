@@ -1,4 +1,10 @@
+use std::net::{IpAddr, Ipv4Addr, SocketAddr};
+
 use anyhow::Context;
+use the_axum::{
+    error::ErrorVerbosity,
+    server::{Server, ServerConfig},
+};
 
 fn init_tracing() -> anyhow::Result<()> {
     tracing::subscriber::set_global_default(
@@ -22,6 +28,14 @@ async fn main() -> anyhow::Result<()> {
     init_tracing()?;
 
     tracing::info!("Starting ...");
+
+    let socket_address = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 5000);
+    let error_verbosity = ErrorVerbosity::Full;
+
+    let server_config = ServerConfig::new(socket_address, error_verbosity);
+    let server = Server::new(server_config);
+
+    server.run().await?;
 
     Ok(())
 }

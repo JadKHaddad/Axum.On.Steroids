@@ -7,10 +7,7 @@ use schemars::JsonSchema;
 use serde::de::DeserializeOwned;
 use std::fmt::Debug;
 
-use crate::{
-    error::{ApiError, PathError},
-    state::ApiState,
-};
+use crate::error::{ApiError, ErrorVerbosityProvider, PathError};
 
 /// A Wrapper around [`axum::extract::Path`] that rejects with an [`ApiError`].
 ///
@@ -21,7 +18,7 @@ pub struct ApiPath<T>(pub T);
 impl<T, S> FromRequestParts<S> for ApiPath<T>
 where
     T: DeserializeOwned + JsonSchema + Debug + Send,
-    S: Send + Sync + ApiState,
+    S: Send + Sync + ErrorVerbosityProvider,
 {
     type Rejection = ApiError;
 

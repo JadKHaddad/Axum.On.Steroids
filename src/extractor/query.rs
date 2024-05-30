@@ -7,10 +7,7 @@ use schemars::{schema_for, JsonSchema};
 use serde::de::DeserializeOwned;
 use std::fmt::Debug;
 
-use crate::{
-    error::{ApiError, InternalServerError, QueryError},
-    state::ApiState,
-};
+use crate::error::{ApiError, ErrorVerbosityProvider, InternalServerError, QueryError};
 
 /// A Wrapper around [`axum::extract::Query`] that rejects with an [`ApiError`].
 ///
@@ -21,7 +18,7 @@ pub struct ApiQuery<T>(pub T);
 impl<T, S> FromRequestParts<S> for ApiQuery<T>
 where
     T: DeserializeOwned + JsonSchema + Debug + Send,
-    S: Send + Sync + ApiState,
+    S: Send + Sync + ErrorVerbosityProvider,
 {
     type Rejection = ApiError;
 

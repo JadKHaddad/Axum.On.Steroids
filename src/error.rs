@@ -19,6 +19,10 @@ pub enum ErrorVerbosity {
     Full,
 }
 
+pub trait ErrorVerbosityProvider {
+    fn error_verbosity(&self) -> ErrorVerbosity;
+}
+
 #[derive(Debug, Serialize, ToSchema)]
 struct ApiErrorResponse {
     error: ApiError,
