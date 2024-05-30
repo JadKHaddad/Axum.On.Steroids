@@ -11,7 +11,9 @@ use tower_http::{
     trace::{DefaultMakeSpan, DefaultOnRequest, DefaultOnResponse, TraceLayer},
 };
 
-use crate::{error::ErrorVerbosity, state::ApiState};
+use crate::{
+    error::ErrorVerbosity, layer::response_body_tracer::ResponseBodyTraceLayer, state::ApiState,
+};
 
 pub struct ServerConfig {
     socket_address: SocketAddr,
@@ -42,6 +44,7 @@ impl Server {
         let app = Router::new()
             .route("/", get(|| async { "Hello, World!" }))
             .with_state(state)
+            .layer(ResponseBodyTraceLayer {})
             .layer(
                 ServiceBuilder::new()
                     .layer(
