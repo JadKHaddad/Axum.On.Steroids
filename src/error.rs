@@ -7,6 +7,8 @@ use derive_more::From;
 use serde::Serialize;
 use utoipa::ToSchema;
 
+// TODO: use ErrorTypes for QueryError, BodyError and PathError
+
 #[derive(Debug, Clone, Copy)]
 pub enum ErrorVerbosity {
     /// Server returns an empty response with [`StatusCode::NO_CONTENT`] for all errors.
