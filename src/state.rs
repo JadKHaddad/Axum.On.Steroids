@@ -2,7 +2,7 @@ use std::{ops::Deref, sync::Arc};
 
 use crate::{
     error::{ErrorVerbosity, ErrorVerbosityProvider},
-    extractor::api_key::ApiKeyProvider,
+    extractor::{api_key::ApiKeyProvider, optional::StateProvider},
 };
 
 #[derive(Clone)]
@@ -56,3 +56,5 @@ impl ApiKeyProvider for ApiState {
         self.api_keys.contains(&key.to_string())
     }
 }
+
+impl StateProvider for ApiState {}
