@@ -86,6 +86,10 @@ pub enum ApiError {
     ///
     /// This error is returned when the path is not as expected.
     Path(PathError),
+    /// Method not allowed
+    ///
+    /// This error is returned when the method is not allowed.
+    MethodNotAllowed(MethodNotAllowedError),
 }
 
 impl ApiError {
@@ -95,6 +99,7 @@ impl ApiError {
             ApiError::Query(err) => err.verbosity,
             ApiError::Body(err) => err.verbosity,
             ApiError::Path(err) => err.verbosity,
+            ApiError::MethodNotAllowed(err) => err.verbosity,
         }
     }
 
@@ -106,6 +111,7 @@ impl ApiError {
             ApiError::Query(_) => String::from("Failed to parse query parameters"),
             ApiError::Body(_) => String::from("Failed to parse body"),
             ApiError::Path(_) => String::from("Failed to parse path parameters"),
+            ApiError::MethodNotAllowed(_) => String::from("Method not allowed"),
         }
     }
 
@@ -115,6 +121,7 @@ impl ApiError {
             ApiError::Query(err) => err.clear(),
             ApiError::Body(err) => err.clear(),
             ApiError::Path(err) => err.clear(),
+            ApiError::MethodNotAllowed(_) => {}
         }
     }
 
@@ -124,6 +131,7 @@ impl ApiError {
             ApiError::Query(err) => err.status_code(),
             ApiError::Body(err) => err.status_code(),
             ApiError::Path(err) => err.status_code(),
+            ApiError::MethodNotAllowed(err) => err.status_code(),
         }
     }
 }
@@ -225,5 +233,17 @@ impl PathError {
 
     fn status_code(&self) -> StatusCode {
         StatusCode::BAD_REQUEST
+    }
+}
+
+#[derive(Debug, Serialize)]
+pub struct MethodNotAllowedError {
+    #[serde(skip)]
+    pub(crate) verbosity: ErrorVerbosity,
+}
+
+impl MethodNotAllowedError {
+    fn status_code(&self) -> StatusCode {
+        StatusCode::METHOD_NOT_ALLOWED
     }
 }

@@ -13,7 +13,10 @@ use tower_http::{
 
 use crate::{
     error::ErrorVerbosity,
-    middleware::{trace_headers::trace_headers, trace_response_body::trace_response_body},
+    middleware::{
+        method_not_allowed::method_not_allowed, trace_headers::trace_headers,
+        trace_response_body::trace_response_body,
+    },
     state::ApiState,
 };
 
@@ -49,6 +52,10 @@ impl Server {
             .layer(middleware::from_fn_with_state(
                 state.clone(),
                 trace_response_body,
+            ))
+            .layer(middleware::from_fn_with_state(
+                state.clone(),
+                method_not_allowed,
             ))
             .with_state(state)
             .layer(
