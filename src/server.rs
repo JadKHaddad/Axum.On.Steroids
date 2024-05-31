@@ -1,7 +1,7 @@
 use std::net::SocketAddr;
 
 use anyhow::Context;
-use axum::{routing::get, Router};
+use axum::{middleware, routing::get, Router};
 use tokio::net::TcpListener;
 use tower::ServiceBuilder;
 use tower_http::{
@@ -12,7 +12,7 @@ use tower_http::{
 };
 
 use crate::{
-    error::ErrorVerbosity, layer::response_body_tracer::ResponseBodyTraceLayer, state::ApiState,
+    error::ErrorVerbosity, middleware::trace_response_body::trace_response_body, state::ApiState,
 };
 
 pub struct ServerConfig {
@@ -43,8 +43,11 @@ impl Server {
 
         let app = Router::new()
             .route("/", get(|| async { "Hello, World!" }))
+            .layer(middleware::from_fn_with_state(
+                state.clone(),
+                trace_response_body,
+            ))
             .with_state(state)
-            .layer(ResponseBodyTraceLayer {})
             .layer(
                 ServiceBuilder::new()
                     .layer(

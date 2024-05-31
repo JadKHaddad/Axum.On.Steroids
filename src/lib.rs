@@ -1,5 +1,5 @@
 pub mod error;
 pub mod extractor;
-mod layer;
+mod middleware;
 pub mod server;
 mod state;
