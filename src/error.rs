@@ -90,6 +90,10 @@ pub enum ApiError {
     ///
     /// This error is returned when the method is not allowed.
     MethodNotAllowed(MethodNotAllowedError),
+    /// API key error
+    ///
+    /// This error is returned when the API key is not as expected.
+    ApiKey(ApiKeyError),
 }
 
 impl ApiError {
@@ -100,6 +104,7 @@ impl ApiError {
             ApiError::Body(err) => err.verbosity,
             ApiError::Path(err) => err.verbosity,
             ApiError::MethodNotAllowed(err) => err.verbosity,
+            ApiError::ApiKey(err) => err.verbosity,
         }
     }
 
@@ -112,6 +117,7 @@ impl ApiError {
             ApiError::Body(_) => String::from("Failed to parse body"),
             ApiError::Path(_) => String::from("Failed to parse path parameters"),
             ApiError::MethodNotAllowed(_) => String::from("Method not allowed"),
+            ApiError::ApiKey(_) => String::from("API key error"),
         }
     }
 
@@ -122,6 +128,7 @@ impl ApiError {
             ApiError::Body(err) => err.clear(),
             ApiError::Path(err) => err.clear(),
             ApiError::MethodNotAllowed(_) => {}
+            ApiError::ApiKey(err) => err.clear(),
         }
     }
 
@@ -132,6 +139,7 @@ impl ApiError {
             ApiError::Body(err) => err.status_code(),
             ApiError::Path(err) => err.status_code(),
             ApiError::MethodNotAllowed(err) => err.status_code(),
+            ApiError::ApiKey(err) => err.status_code(),
         }
     }
 }
@@ -245,5 +253,22 @@ pub struct MethodNotAllowedError {
 impl MethodNotAllowedError {
     fn status_code(&self) -> StatusCode {
         StatusCode::METHOD_NOT_ALLOWED
+    }
+}
+
+#[derive(Debug, Serialize)]
+pub struct ApiKeyError {
+    #[serde(skip)]
+    pub(crate) verbosity: ErrorVerbosity,
+    pub(crate) api_key_error_reason: String,
+}
+
+impl ApiKeyError {
+    fn clear(&mut self) {
+        self.api_key_error_reason.clear();
+    }
+
+    fn status_code(&self) -> StatusCode {
+        StatusCode::UNAUTHORIZED
     }
 }

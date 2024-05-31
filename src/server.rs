@@ -23,13 +23,22 @@ use crate::{
 pub struct ServerConfig {
     socket_address: SocketAddr,
     error_verbosity: ErrorVerbosity,
+    api_key_header_name: String,
+    api_keys: Vec<String>,
 }
 
 impl ServerConfig {
-    pub fn new(socket_address: SocketAddr, error_verbosity: ErrorVerbosity) -> Self {
+    pub fn new(
+        socket_address: SocketAddr,
+        error_verbosity: ErrorVerbosity,
+        api_key_header_name: String,
+        api_keys: Vec<String>,
+    ) -> Self {
         Self {
             socket_address,
             error_verbosity,
+            api_key_header_name,
+            api_keys,
         }
     }
 }
@@ -44,7 +53,11 @@ impl Server {
     }
 
     pub async fn run(self) -> anyhow::Result<()> {
-        let state = ApiState::new(self.config.error_verbosity);
+        let state = ApiState::new(
+            self.config.error_verbosity,
+            self.config.api_key_header_name,
+            self.config.api_keys,
+        );
 
         let app = Router::new()
             .route("/", get(|| async { "Hello, World!" }))
