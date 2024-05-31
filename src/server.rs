@@ -12,7 +12,9 @@ use tower_http::{
 };
 
 use crate::{
-    error::ErrorVerbosity, middleware::trace_response_body::trace_response_body, state::ApiState,
+    error::ErrorVerbosity,
+    middleware::{trace_headers::trace_headers, trace_response_body::trace_response_body},
+    state::ApiState,
 };
 
 pub struct ServerConfig {
@@ -43,6 +45,7 @@ impl Server {
 
         let app = Router::new()
             .route("/", get(|| async { "Hello, World!" }))
+            .layer(middleware::from_fn(trace_headers))
             .layer(middleware::from_fn_with_state(
                 state.clone(),
                 trace_response_body,
