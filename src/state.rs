@@ -51,6 +51,7 @@ impl ApiKeyProvider for ApiState {
         &self.api_key_header_name
     }
 
+    // FIX: very expensive operation
     fn validate(&self, key: &str) -> bool {
         self.api_keys.contains(&key.to_string())
     }

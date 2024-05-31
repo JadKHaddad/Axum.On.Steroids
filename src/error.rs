@@ -117,7 +117,7 @@ impl ApiError {
             ApiError::Body(_) => String::from("Failed to parse body"),
             ApiError::Path(_) => String::from("Failed to parse path parameters"),
             ApiError::MethodNotAllowed(_) => String::from("Method not allowed"),
-            ApiError::ApiKey(_) => String::from("API key error"),
+            ApiError::ApiKey(err) => err.message(),
         }
     }
 
@@ -257,18 +257,57 @@ impl MethodNotAllowedError {
 }
 
 #[derive(Debug, Serialize)]
+pub enum ApiKeyErrorType {
+    Missing,
+    InvalidFromat,
+    Invalid,
+}
+
+#[derive(Debug, Serialize)]
 pub struct ApiKeyError {
     #[serde(skip)]
-    pub(crate) verbosity: ErrorVerbosity,
-    pub(crate) api_key_error_reason: String,
+    verbosity: ErrorVerbosity,
+    api_key_error_type: ApiKeyErrorType,
+    api_key_error_reason: String,
 }
 
 impl ApiKeyError {
+    pub fn new(verbosity: ErrorVerbosity, api_key_error_type: ApiKeyErrorType) -> Self {
+        let api_key_error_reason = Self::reason(&api_key_error_type);
+
+        ApiKeyError {
+            verbosity,
+            api_key_error_type,
+            api_key_error_reason,
+        }
+    }
+
+    fn reason(api_key_error_type: &ApiKeyErrorType) -> String {
+        match api_key_error_type {
+            ApiKeyErrorType::Missing => String::from("API key not found"),
+            ApiKeyErrorType::InvalidFromat => {
+                String::from("API key header value is not valid ASCII string")
+            }
+            ApiKeyErrorType::Invalid => String::from("Invalid API key"),
+        }
+    }
+
+    fn message(&self) -> String {
+        match self.verbosity {
+            ErrorVerbosity::None => String::new(),
+            _ => self.api_key_error_reason.clone(),
+        }
+    }
+
     fn clear(&mut self) {
         self.api_key_error_reason.clear();
     }
 
     fn status_code(&self) -> StatusCode {
-        StatusCode::UNAUTHORIZED
+        match self.api_key_error_type {
+            ApiKeyErrorType::Missing => StatusCode::UNAUTHORIZED,
+            ApiKeyErrorType::InvalidFromat => StatusCode::UNAUTHORIZED,
+            ApiKeyErrorType::Invalid => StatusCode::FORBIDDEN,
+        }
     }
 }

@@ -1,1 +1,1 @@
-pub mod api_key_extractor;
+pub mod extract_api_key;

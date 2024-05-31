@@ -17,6 +17,7 @@ use crate::{
         method_not_allowed::method_not_allowed, trace_headers::trace_headers,
         trace_response_body::trace_response_body,
     },
+    route::extract_api_key,
     state::ApiState,
 };
 
@@ -61,6 +62,10 @@ impl Server {
 
         let app = Router::new()
             .route("/", get(|| async { "Hello, World!" }))
+            .route(
+                "/extract_api_key_using_extractor",
+                get(extract_api_key::extract_api_key_using_extractor),
+            )
             .layer(middleware::from_fn(trace_headers))
             .layer(middleware::from_fn_with_state(
                 state.clone(),

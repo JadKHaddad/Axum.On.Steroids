@@ -1,6 +1,6 @@
 use axum::{async_trait, extract::FromRequestParts, http::request::Parts};
 
-use crate::error::{ApiError, ApiKeyError, ErrorVerbosityProvider};
+use crate::error::{ApiError, ApiKeyError, ApiKeyErrorType, ErrorVerbosityProvider};
 
 pub trait ApiKeyProvider {
     /// Returns the API key header name.
@@ -11,9 +11,7 @@ pub trait ApiKeyProvider {
 }
 
 /// Extracts and validates the API key from the request headers.
-pub struct ApiKey {
-    pub key: String,
-}
+pub struct ApiKey(pub String);
 
 #[async_trait]
 impl<S> FromRequestParts<S> for ApiKey
@@ -32,35 +30,25 @@ where
         let used_api_key = headers
             .get(header_name)
             .ok_or_else(|| {
-                tracing::warn!("API key not found");
+                tracing::warn!("Rejection. API key not found");
 
-                ApiKeyError {
-                    verbosity,
-                    api_key_error_reason: "API key not found".to_string(),
-                }
+                ApiKeyError::new(verbosity, ApiKeyErrorType::Missing)
             })?
             .to_str()
             .map_err(|err| {
-                tracing::warn!(%err, "API key header value is not a valid string");
+                tracing::warn!(%err, "Rejection. API key header value is not valid ASCII string");
 
-                ApiKeyError {
-                    verbosity,
-                    api_key_error_reason: "API key header value is not a valid string".to_string(),
-                }
+                ApiKeyError::new(verbosity, ApiKeyErrorType::InvalidFromat)
             })?;
 
         if !state.validate(used_api_key) {
-            tracing::warn!(used_api_key, "Invalid API key");
+            tracing::warn!(%used_api_key, "Rejection. Invalid API key");
 
-            return Err(ApiKeyError {
-                verbosity,
-                api_key_error_reason: "Invalid API key".to_string(),
-            }
-            .into());
+            return Err(ApiKeyError::new(verbosity, ApiKeyErrorType::Invalid).into());
         }
 
-        Ok(ApiKey {
-            key: used_api_key.to_string(),
-        })
+        tracing::trace!(%used_api_key, "Extracted. Validated");
+
+        Ok(ApiKey(used_api_key.to_string()))
     }
 }
