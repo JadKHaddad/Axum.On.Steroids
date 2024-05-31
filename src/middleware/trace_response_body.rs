@@ -11,7 +11,9 @@ use crate::{
     state::ApiState,
 };
 
-/// Middlware to trace the response body
+/// Middlware to trace the response body.
+///
+/// This is a very expensive middleware, since it reads the entire response body and logs it.
 pub async fn trace_response_body(
     State(state): State<ApiState>,
     req: Request,
@@ -27,7 +29,7 @@ pub async fn trace_response_body(
         .to_bytes();
 
     if let Ok(body) = std::str::from_utf8(&bytes) {
-        tracing::trace!("Response: {}", body);
+        tracing::trace!(%body, "Response body");
     }
 
     let res = Response::from_parts(parts, Body::from(bytes));
