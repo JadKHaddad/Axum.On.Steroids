@@ -18,9 +18,9 @@ impl IntoResponse for ExtractApiKeyResponse {
     }
 }
 
-/// Extracts the API key from the request using the [`ApiKey`] extractor.
+/// Extracts the API key from the request using the [`ValidApiKey`] extractor.
 ///
-/// This function will reject if [`ApiKey`] rejects.
+/// This function will reject if [`ValidApiKey`] rejects.
 pub async fn extract_api_key_using_extractor(
     ValidApiKey(key): ValidApiKey,
 ) -> ExtractApiKeyResponse {

@@ -31,8 +31,8 @@ async fn main() -> anyhow::Result<()> {
 
     let socket_address = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 5000);
     let error_verbosity = ErrorVerbosity::Full;
-    let api_key_header_name = "x-api-key".to_string();
-    let api_keys = vec!["api-key-1".to_string()];
+    let api_key_header_name = String::from("x-api-key");
+    let api_keys = vec![String::from("api-key-1")];
 
     let server_config = ServerConfig::new(
         socket_address,

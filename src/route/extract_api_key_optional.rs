@@ -18,6 +18,9 @@ impl IntoResponse for OptionalExtractApiKeyResponse {
     }
 }
 
+/// Extracts the API key from the request using the [`Optional`] extractor.
+///
+/// The API key is optional, so this function will not reject if the API key is not provided.
 pub async fn extract_api_key_using_optional_extractor(
     Optional(opt_api_key): Optional<ValidApiKey>,
 ) -> OptionalExtractApiKeyResponse {

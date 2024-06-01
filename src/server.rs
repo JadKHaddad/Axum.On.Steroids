@@ -15,9 +15,9 @@ use crate::{
     error::ErrorVerbosity,
     middleware::{
         method_not_allowed::method_not_allowed, trace_headers::trace_headers,
-        trace_response_body::trace_response_body,
+        trace_response_body::trace_response_body, validate_api_key_and_put_as_extension,
     },
-    route::{extract_api_key, extract_api_key_optional},
+    route::{api_key_protected, extract_api_key, extract_api_key_optional},
     state::ApiState,
 };
 
@@ -60,8 +60,24 @@ impl Server {
             self.config.api_keys,
         );
 
+        let api_key_protected_app = Router::new()
+            .route("/", get(|| async { "API Key Protected" }))
+            .route(
+                "/do_not_use_extension",
+                get(api_key_protected::do_not_use_extension::do_not_use_extension),
+            )
+            .route(
+                "/api_key_from_extension",
+                get(api_key_protected::api_key_from_extension::api_key_from_extension),
+            )
+            .layer(middleware::from_fn_with_state(
+                state.clone(),
+                validate_api_key_and_put_as_extension::validate_api_key_and_put_as_extension,
+            ));
+
         let app = Router::new()
-            .route("/", get(|| async { "Hello, World!" }))
+            .nest("/api_key_protected", api_key_protected_app)
+            .route("/", get(|| async { "Index" }))
             .route(
                 "/extract_api_key_using_optional_extractor",
                 get(extract_api_key_optional::extract_api_key_using_optional_extractor),
