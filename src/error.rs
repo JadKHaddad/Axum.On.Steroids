@@ -13,6 +13,8 @@ use utoipa::ToSchema;
 pub enum ErrorVerbosity {
     /// Server returns an empty response with [`StatusCode::NO_CONTENT`] for all errors.
     None,
+    /// Server returns only the appropriate status code.
+    StatusCode,
     /// Server returns only the message with the appropriate status code.
     Message,
     /// Server returns the message, the error type with cleared error content and the appropriate status code.
@@ -44,6 +46,7 @@ impl IntoResponse for ApiErrorResponse {
     fn into_response(mut self) -> Response {
         match self.error.verbosity() {
             ErrorVerbosity::None => StatusCode::NO_CONTENT.into_response(),
+            ErrorVerbosity::StatusCode => self.error.status_code().into_response(),
             ErrorVerbosity::Message => {
                 let status_code = self.error.status_code();
 

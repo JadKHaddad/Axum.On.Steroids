@@ -6,5 +6,6 @@
 /// Used to pass the API key arround as an Extension.
 #[derive(Debug, Clone)]
 pub struct UsedApiKey {
+    // TODO: can use a heapless string here.
     pub used_api_key: String,
 }
