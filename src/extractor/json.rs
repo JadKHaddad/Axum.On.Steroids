@@ -6,7 +6,10 @@ use schemars::{schema_for, JsonSchema};
 use serde::de::DeserializeOwned;
 use std::fmt::Debug;
 
-use crate::error::{ApiError, BodyError, ErrorVerbosityProvider, InternalServerError};
+use crate::{
+    error::{ApiError, BodyError, InternalServerError},
+    traits::ErrorVerbosityProvider,
+};
 
 /// A Wrapper around [`axum::extract::Json`] that rejects with an [`ApiError`].
 ///

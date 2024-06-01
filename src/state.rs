@@ -1,8 +1,8 @@
 use std::{ops::Deref, sync::Arc};
 
 use crate::{
-    error::{ErrorVerbosity, ErrorVerbosityProvider},
-    extractor::{api_key::ApiKeyProvider, optional::StateProvider},
+    error::ErrorVerbosity,
+    traits::{ApiKeyProvider, ErrorVerbosityProvider, StateProvider},
 };
 
 #[derive(Clone)]

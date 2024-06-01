@@ -7,8 +7,9 @@ use axum::{
 use http_body_util::BodyExt;
 
 use crate::{
-    error::{ApiError, ErrorVerbosityProvider, InternalServerError},
+    error::{ApiError, InternalServerError},
     state::ApiState,
+    traits::ErrorVerbosityProvider,
 };
 
 /// Middlware to trace the response body.

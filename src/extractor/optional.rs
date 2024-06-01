@@ -1,12 +1,7 @@
 use axum::{async_trait, extract::FromRequestParts, http::request::Parts};
 use std::convert::Infallible;
 
-use crate::error::ErrorVerbosityProvider;
-
-use super::api_key::ApiKeyProvider;
-
-// TODO: move all traits to a separate file
-pub trait StateProvider: ApiKeyProvider + ErrorVerbosityProvider {}
+use crate::traits::StateProvider;
 
 /// Extracts an optional value from the request.
 pub struct Optional<X>(pub Option<X>);

@@ -7,7 +7,10 @@ use schemars::JsonSchema;
 use serde::de::DeserializeOwned;
 use std::fmt::Debug;
 
-use crate::error::{ApiError, ErrorVerbosityProvider, PathError};
+use crate::{
+    error::{ApiError, PathError},
+    traits::ErrorVerbosityProvider,
+};
 
 /// A Wrapper around [`axum::extract::Path`] that rejects with an [`ApiError`].
 ///

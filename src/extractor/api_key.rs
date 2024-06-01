@@ -1,17 +1,13 @@
 use axum::{async_trait, extract::FromRequestParts, http::request::Parts};
 
-use crate::error::{ApiError, ApiKeyError, ApiKeyErrorType, ErrorVerbosityProvider};
+use crate::{
+    error::{ApiError, ApiKeyError, ApiKeyErrorType},
+    traits::{ApiKeyProvider, ErrorVerbosityProvider},
+    types::used_api_key::UsedApiKey,
+};
 
-pub trait ApiKeyProvider {
-    /// Returns the API key header name.
-    fn header_name(&self) -> &str;
-
-    /// Validates the API key.
-    fn validate(&self, key: &str) -> bool;
-}
-
-/// Extracts and validates the API key from the request headers.
-pub struct ApiKey(pub String);
+/// Extracts the API key from the request headers.
+pub struct ApiKey(pub UsedApiKey);
 
 #[async_trait]
 impl<S> FromRequestParts<S> for ApiKey
@@ -41,14 +37,10 @@ where
                 ApiKeyError::new(verbosity, ApiKeyErrorType::InvalidFromat)
             })?;
 
-        if !state.validate(used_api_key) {
-            tracing::warn!(%used_api_key, "Rejection. Invalid API key");
+        tracing::trace!(%used_api_key, "Extracted");
 
-            return Err(ApiKeyError::new(verbosity, ApiKeyErrorType::Invalid).into());
-        }
+        let used_api_key = used_api_key.to_string();
 
-        tracing::trace!(%used_api_key, "Extracted. Validated");
-
-        Ok(ApiKey(used_api_key.to_string()))
+        Ok(ApiKey(UsedApiKey { used_api_key }))
     }
 }

@@ -6,8 +6,9 @@ use axum::{
 };
 
 use crate::{
-    error::{ApiError, ErrorVerbosityProvider, MethodNotAllowedError},
+    error::{ApiError, MethodNotAllowedError},
     state::ApiState,
+    traits::ErrorVerbosityProvider,
 };
 
 /// Middleware to map axum's `MethodNotAllowed` rejection to our [`ApiError`].

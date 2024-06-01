@@ -5,7 +5,7 @@ use axum::{
 };
 use serde::Serialize;
 
-use crate::extractor::{api_key::ApiKey, optional::Optional};
+use crate::extractor::{optional::Optional, valid_api_key::ValidApiKey};
 
 #[derive(Debug, Serialize)]
 pub struct OptionalExtractApiKeyResponse {
@@ -19,9 +19,9 @@ impl IntoResponse for OptionalExtractApiKeyResponse {
 }
 
 pub async fn extract_api_key_using_optional_extractor(
-    Optional(opt_api_key): Optional<ApiKey>,
+    Optional(opt_api_key): Optional<ValidApiKey>,
 ) -> OptionalExtractApiKeyResponse {
     OptionalExtractApiKeyResponse {
-        used_api_key: opt_api_key.map(|key| key.0.to_string()),
+        used_api_key: opt_api_key.map(|key| key.0.used_api_key),
     }
 }
