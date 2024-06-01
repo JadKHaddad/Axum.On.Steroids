@@ -1,7 +1,11 @@
 use std::net::SocketAddr;
 
 use anyhow::Context;
-use axum::{middleware, routing::get, Router};
+use axum::{
+    middleware,
+    routing::{get, post},
+    Router,
+};
 use tokio::net::TcpListener;
 use tower::ServiceBuilder;
 use tower_http::{
@@ -17,7 +21,7 @@ use crate::{
         method_not_allowed::method_not_allowed, trace_headers::trace_headers,
         trace_response_body::trace_response_body, validate_api_key_and_put_as_extension,
     },
-    route::{api_key_protected, extract_api_key, extract_api_key_optional},
+    route::{api_key_protected, extract_api_key, extract_api_key_optional, post_json},
     state::ApiState,
 };
 
@@ -60,6 +64,11 @@ impl Server {
             self.config.api_keys,
         );
 
+        let post_json_app = Router::new().route(
+            "/echo_a_person",
+            post(post_json::echo_a_person::echo_a_person),
+        );
+
         let api_key_protected_app = Router::new()
             .route("/", get(|| async { "API Key Protected" }))
             .route(
@@ -77,6 +86,7 @@ impl Server {
 
         let app = Router::new()
             .nest("/api_key_protected", api_key_protected_app)
+            .nest("/post_json", post_json_app)
             .route("/", get(|| async { "Index" }))
             .route(
                 "/extract_api_key_using_optional_extractor",
