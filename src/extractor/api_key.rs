@@ -7,6 +7,7 @@ use crate::{
 };
 
 /// Extracts the API key from the request headers.
+#[derive(Debug, Clone)]
 pub struct ApiKey(pub UsedApiKey);
 
 #[async_trait]

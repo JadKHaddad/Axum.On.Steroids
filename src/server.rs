@@ -21,7 +21,10 @@ use crate::{
         method_not_allowed::method_not_allowed, trace_headers::trace_headers,
         trace_response_body::trace_response_body, validate_api_key_and_put_as_extension,
     },
-    route::{api_key_protected, extract_api_key, extract_api_key_optional, post_json},
+    route::{
+        api_key_protected, extract_api_key, extract_valid_api_key, extract_valid_api_key_optional,
+        post_json,
+    },
     state::ApiState,
 };
 
@@ -76,8 +79,8 @@ impl Server {
                 get(api_key_protected::do_not_use_extension::do_not_use_extension),
             )
             .route(
-                "/api_key_from_extension",
-                get(api_key_protected::api_key_from_extension::api_key_from_extension),
+                "/valid_api_key_from_extension",
+                get(api_key_protected::valid_api_key_from_extension::valid_api_key_from_extension),
             )
             .layer(middleware::from_fn_with_state(
                 state.clone(),
@@ -89,12 +92,16 @@ impl Server {
             .nest("/post_json", post_json_app)
             .route("/", get(|| async { "Index" }))
             .route(
-                "/extract_api_key_using_optional_extractor",
-                get(extract_api_key_optional::extract_api_key_using_optional_extractor),
-            )
-            .route(
                 "/extract_api_key_using_extractor",
                 get(extract_api_key::extract_api_key_using_extractor),
+            )
+            .route(
+                "/extract_valid_api_key_using_optional_extractor",
+                get(extract_valid_api_key_optional::extract_valid_api_key_using_optional_extractor),
+            )
+            .route(
+                "/extract_valid_api_key_using_extractor",
+                get(extract_valid_api_key::extract_valid_api_key_using_extractor),
             )
             .layer(middleware::from_fn(trace_headers))
             .layer(middleware::from_fn_with_state(

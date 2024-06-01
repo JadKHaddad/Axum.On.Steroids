@@ -6,11 +6,11 @@ use crate::extractor::valid_api_key::ValidApiKey;
 ///
 /// Next layers can extract the API key from the extension. See [`crate::route::api_key_protected::api_key_from_extension`] for an example.
 pub async fn validate_api_key_and_put_as_extension(
-    ValidApiKey(key): ValidApiKey,
+    valid_api_key: ValidApiKey,
     mut req: Request,
     next: Next,
 ) -> impl IntoResponse {
-    req.extensions_mut().insert(key);
+    req.extensions_mut().insert(valid_api_key);
 
     next.run(req).await
 }

@@ -8,6 +8,7 @@ use crate::{
 };
 
 /// Extracts and validates the API key from the request headers.
+#[derive(Debug, Clone)]
 pub struct ValidApiKey(pub UsedApiKey);
 
 #[async_trait]

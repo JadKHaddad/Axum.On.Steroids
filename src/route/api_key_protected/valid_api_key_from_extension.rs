@@ -5,7 +5,7 @@ use axum::{
 };
 use serde::Serialize;
 
-use crate::types::used_api_key::UsedApiKey;
+use crate::extractor::valid_api_key::ValidApiKey;
 
 #[derive(Debug, Serialize)]
 pub struct ApiKeyFromExtensionResponse {
@@ -19,10 +19,10 @@ impl IntoResponse for ApiKeyFromExtensionResponse {
 }
 
 /// Extracts the API key that was provided from [`validate_api_key_and_put_as_extension`](crate::middleware::validate_api_key_and_put_as_extension::validate_api_key_and_put_as_extension) middleware.
-pub async fn api_key_from_extension(
-    used_api_key: Extension<UsedApiKey>,
+pub async fn valid_api_key_from_extension(
+    Extension(valid_api_key): Extension<ValidApiKey>,
 ) -> ApiKeyFromExtensionResponse {
     ApiKeyFromExtensionResponse {
-        used_api_key: used_api_key.used_api_key.clone(),
+        used_api_key: valid_api_key.0.used_api_key.clone(),
     }
 }

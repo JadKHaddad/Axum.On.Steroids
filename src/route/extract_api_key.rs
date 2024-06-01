@@ -5,7 +5,7 @@ use axum::{
 };
 use serde::Serialize;
 
-use crate::extractor::valid_api_key::ValidApiKey;
+use crate::extractor::api_key::ApiKey;
 
 #[derive(Debug, Serialize)]
 pub struct ExtractApiKeyResponse {
@@ -18,12 +18,11 @@ impl IntoResponse for ExtractApiKeyResponse {
     }
 }
 
-/// Extracts the API key from the request using the [`ValidApiKey`] extractor.
+/// Extracts the API key from the request using the [`ApiKey`] extractor.
 ///
-/// This function will reject if [`ValidApiKey`] rejects.
-pub async fn extract_api_key_using_extractor(
-    ValidApiKey(key): ValidApiKey,
-) -> ExtractApiKeyResponse {
+/// The API key is not validated by [`ApiKey`].
+/// This function will reject if [`ApiKey`] rejects.
+pub async fn extract_api_key_using_extractor(ApiKey(key): ApiKey) -> ExtractApiKeyResponse {
     ExtractApiKeyResponse {
         used_api_key: key.used_api_key,
     }
