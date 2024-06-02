@@ -9,7 +9,7 @@ use http_body_util::BodyExt;
 use crate::{
     error::{ApiError, InternalServerError},
     state::ApiState,
-    traits::ErrorVerbosityProvider,
+    traits::StateProvider,
 };
 
 /// Middlware to trace the response body.

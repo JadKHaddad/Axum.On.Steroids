@@ -9,7 +9,7 @@ use std::fmt::Debug;
 
 use crate::{
     error::{ApiError, InternalServerError, QueryError},
-    traits::ErrorVerbosityProvider,
+    traits::StateProvider,
 };
 
 /// A Wrapper around [`axum::extract::Query`] that rejects with an [`ApiError`].
@@ -21,7 +21,7 @@ pub struct ApiQuery<T>(pub T);
 impl<T, S> FromRequestParts<S> for ApiQuery<T>
 where
     T: DeserializeOwned + JsonSchema + Debug + Send,
-    S: Send + Sync + ErrorVerbosityProvider,
+    S: Send + Sync + StateProvider,
 {
     type Rejection = ApiError;
 

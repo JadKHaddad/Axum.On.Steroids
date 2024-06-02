@@ -8,7 +8,7 @@ use std::fmt::Debug;
 
 use crate::{
     error::{ApiError, BodyError, InternalServerError},
-    traits::ErrorVerbosityProvider,
+    traits::StateProvider,
 };
 
 /// A Wrapper around [`axum::extract::Json`] that rejects with an [`ApiError`].
@@ -20,7 +20,7 @@ pub struct ApiJson<T>(pub T);
 impl<T, S> FromRequest<S> for ApiJson<T>
 where
     T: DeserializeOwned + JsonSchema + Debug + Send,
-    S: Send + Sync + ErrorVerbosityProvider,
+    S: Send + Sync + StateProvider,
 {
     type Rejection = ApiError;
 

@@ -9,7 +9,7 @@ use std::fmt::Debug;
 
 use crate::{
     error::{ApiError, PathError},
-    traits::ErrorVerbosityProvider,
+    traits::StateProvider,
 };
 
 /// A Wrapper around [`axum::extract::Path`] that rejects with an [`ApiError`].
@@ -21,7 +21,7 @@ pub struct ApiPath<T>(pub T);
 impl<T, S> FromRequestParts<S> for ApiPath<T>
 where
     T: DeserializeOwned + JsonSchema + Debug + Send,
-    S: Send + Sync + ErrorVerbosityProvider,
+    S: Send + Sync + StateProvider,
 {
     type Rejection = ApiError;
 

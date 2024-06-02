@@ -3,7 +3,7 @@ use axum_auth::AuthBasic;
 
 use crate::{
     error::{ApiError, BasicAuthError},
-    traits::ErrorVerbosityProvider,
+    traits::StateProvider,
     types::used_basic_auth::UsedBasicAuth,
 };
 
@@ -14,7 +14,7 @@ pub struct ApiBasicAuth(pub UsedBasicAuth);
 #[async_trait]
 impl<S> FromRequestParts<S> for ApiBasicAuth
 where
-    S: Send + Sync + ErrorVerbosityProvider,
+    S: Send + Sync + StateProvider,
 {
     type Rejection = ApiError;
 

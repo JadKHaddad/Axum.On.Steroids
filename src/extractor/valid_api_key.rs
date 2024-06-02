@@ -3,7 +3,7 @@ use axum::{async_trait, extract::FromRequestParts, http::request::Parts};
 use crate::{
     error::{ApiError, ApiKeyError, ApiKeyErrorType},
     extractor::api_key::ApiKey,
-    traits::{ApiKeyProvider, ErrorVerbosityProvider},
+    traits::StateProvider,
     types::used_api_key::UsedApiKey,
 };
 
@@ -14,7 +14,7 @@ pub struct ValidApiKey(pub UsedApiKey);
 #[async_trait]
 impl<S> FromRequestParts<S> for ValidApiKey
 where
-    S: Send + Sync + ApiKeyProvider + ErrorVerbosityProvider,
+    S: Send + Sync + StateProvider,
 {
     type Rejection = ApiError;
 
