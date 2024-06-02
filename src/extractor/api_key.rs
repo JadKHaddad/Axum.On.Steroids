@@ -21,7 +21,7 @@ where
     async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
         let verbosity = state.error_verbosity();
 
-        let header_name = state.header_name();
+        let header_name = state.api_key_header_name();
         let headers = &parts.headers;
 
         let used_api_key = headers

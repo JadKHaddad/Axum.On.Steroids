@@ -42,11 +42,11 @@ impl StateProvider for ApiState {
         self.error_verbosity
     }
 
-    fn header_name(&self) -> &str {
+    fn api_key_header_name(&self) -> &str {
         &self.api_key_header_name
     }
 
-    fn validate(&self, key: &str) -> bool {
+    fn api_key_validate(&self, key: &str) -> bool {
         for valid_key in self.api_keys.iter() {
             if valid_key == key {
                 return true;

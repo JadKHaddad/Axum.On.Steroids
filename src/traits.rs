@@ -5,8 +5,8 @@ pub trait StateProvider {
     fn error_verbosity(&self) -> ErrorVerbosity;
 
     /// Returns the API key header name.
-    fn header_name(&self) -> &str;
+    fn api_key_header_name(&self) -> &str;
 
     /// Validates the API key.
-    fn validate(&self, key: &str) -> bool;
+    fn api_key_validate(&self, key: &str) -> bool;
 }

@@ -24,7 +24,7 @@ where
 
         let ApiKey(UsedApiKey { used_api_key }) = ApiKey::from_request_parts(parts, state).await?;
 
-        if !state.validate(&used_api_key) {
+        if !state.api_key_validate(&used_api_key) {
             tracing::warn!(%used_api_key, "Rejection. Invalid API key");
 
             return Err(ApiKeyError::new(verbosity, ApiKeyErrorType::Invalid).into());
