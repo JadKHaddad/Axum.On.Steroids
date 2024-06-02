@@ -97,6 +97,10 @@ pub enum ApiError {
     ///
     /// This error is returned when the method is not allowed.
     MethodNotAllowed(MethodNotAllowedError),
+    /// Not found error
+    ///
+    /// This error is returned when the requested resource is not found.
+    NotFound(NotFoundError),
     /// API key error
     ///
     /// This error is returned when the API key is not as expected.
@@ -115,6 +119,7 @@ impl ApiError {
             ApiError::Body(err) => err.verbosity,
             ApiError::Path(err) => err.verbosity,
             ApiError::MethodNotAllowed(err) => err.verbosity,
+            ApiError::NotFound(err) => err.verbosity,
             ApiError::ApiKey(err) => err.verbosity,
             ApiError::BasicAuth(err) => err.verbosity,
         }
@@ -129,6 +134,7 @@ impl ApiError {
             ApiError::Body(_) => String::from("Failed to parse body"),
             ApiError::Path(_) => String::from("Failed to parse path parameters"),
             ApiError::MethodNotAllowed(_) => String::from("Method not allowed"),
+            ApiError::NotFound(_) => String::from("The requested resource was not found"),
             ApiError::ApiKey(err) => err.message(),
             ApiError::BasicAuth(_) => String::from("Failed to perform basic auth"),
         }
@@ -141,6 +147,7 @@ impl ApiError {
             ApiError::Body(err) => err.clear(),
             ApiError::Path(err) => err.clear(),
             ApiError::MethodNotAllowed(_) => {}
+            ApiError::NotFound(_) => {}
             ApiError::ApiKey(err) => err.clear(),
             ApiError::BasicAuth(err) => err.clear(),
         }
@@ -153,6 +160,7 @@ impl ApiError {
             ApiError::Body(err) => err.status_code(),
             ApiError::Path(err) => err.status_code(),
             ApiError::MethodNotAllowed(err) => err.status_code(),
+            ApiError::NotFound(err) => err.status_code(),
             ApiError::ApiKey(err) => err.status_code(),
             ApiError::BasicAuth(err) => err.status_code(),
         }
@@ -279,6 +287,18 @@ pub struct MethodNotAllowedError {
 impl MethodNotAllowedError {
     fn status_code(&self) -> StatusCode {
         StatusCode::METHOD_NOT_ALLOWED
+    }
+}
+
+#[derive(Debug, Serialize)]
+pub struct NotFoundError {
+    #[serde(skip)]
+    pub(crate) verbosity: ErrorVerbosity,
+}
+
+impl NotFoundError {
+    fn status_code(&self) -> StatusCode {
+        StatusCode::NOT_FOUND
     }
 }
 

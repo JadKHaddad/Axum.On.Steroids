@@ -19,7 +19,7 @@ use tower_http::{
 use crate::{
     error::ErrorVerbosity,
     middleware::{
-        method_not_allowed::method_not_allowed, trace_headers::trace_headers,
+        method_not_allowed::method_not_allowed, not_found, trace_headers::trace_headers,
         trace_response_body::trace_response_body, validate_api_key_and_put_as_extension,
     },
     route::{
@@ -101,6 +101,7 @@ impl Server {
             ));
 
         let app = Router::new()
+            .fallback(not_found::not_found)
             .nest("/api_key_protected", api_key_protected_app)
             .nest("/post_json", post_json_app)
             .route("/", get(|| async { "Index" }))
