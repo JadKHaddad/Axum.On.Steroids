@@ -28,6 +28,7 @@ use crate::{
     state::ApiState,
 };
 
+// TODO: add from yaml file
 pub struct ServerConfig {
     socket_address: SocketAddr,
     error_verbosity: ErrorVerbosity,

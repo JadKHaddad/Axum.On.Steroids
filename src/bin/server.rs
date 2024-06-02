@@ -29,6 +29,8 @@ async fn main() -> anyhow::Result<()> {
 
     tracing::info!("Starting ...");
 
+    // TODO: add Args parser to get yaml file from command line or env
+
     let socket_address = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 5000);
     let error_verbosity = ErrorVerbosity::Full;
     let api_key_header_name = String::from("x-api-key");
