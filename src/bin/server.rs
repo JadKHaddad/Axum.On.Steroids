@@ -1,8 +1,7 @@
-use std::net::{IpAddr, Ipv4Addr, SocketAddr};
-
 use anyhow::Context;
+use clap::Parser;
 use the_axum::{
-    error::ErrorVerbosity,
+    cli_args::CliArgs,
     server::{Server, ServerConfig},
 };
 
@@ -27,21 +26,11 @@ async fn main() -> anyhow::Result<()> {
 
     init_tracing()?;
 
+    let cli_args = CliArgs::parse();
+
     tracing::info!("Starting ...");
 
-    // TODO: add Args parser to get yaml file from command line or env
-
-    let socket_address = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)), 5000);
-    let error_verbosity = ErrorVerbosity::Full;
-    let api_key_header_name = String::from("x-api-key");
-    let api_keys = vec![String::from("api-key-1")];
-
-    let server_config = ServerConfig::new(
-        socket_address,
-        error_verbosity,
-        api_key_header_name,
-        api_keys,
-    );
+    let server_config = ServerConfig::from_config_file(cli_args.config_file).await?;
     let server = Server::new(server_config);
 
     server.run().await?;

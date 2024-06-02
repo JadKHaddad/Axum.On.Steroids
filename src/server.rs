@@ -1,4 +1,4 @@
-use std::net::SocketAddr;
+use std::{net::SocketAddr, path::Path};
 
 use anyhow::Context;
 use axum::{
@@ -6,6 +6,7 @@ use axum::{
     routing::{get, post},
     Router,
 };
+use serde::Deserialize;
 use tokio::net::TcpListener;
 use tower::ServiceBuilder;
 use tower_http::{
@@ -28,7 +29,7 @@ use crate::{
     state::ApiState,
 };
 
-// TODO: add from yaml file
+#[derive(Debug, Deserialize)]
 pub struct ServerConfig {
     socket_address: SocketAddr,
     error_verbosity: ErrorVerbosity,
@@ -49,6 +50,17 @@ impl ServerConfig {
             api_key_header_name,
             api_keys,
         }
+    }
+
+    pub async fn from_config_file(path: impl AsRef<Path>) -> anyhow::Result<Self> {
+        let config_file = tokio::fs::read_to_string(path)
+            .await
+            .context("Failed to read config file")?;
+
+        let config: ServerConfig =
+            serde_yaml::from_str(&config_file).context("Failed to parse config file")?;
+
+        Ok(config)
     }
 }
 

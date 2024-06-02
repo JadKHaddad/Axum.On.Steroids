@@ -1,0 +1,7 @@
+---
+socket_address: 127.0.0.1:5000
+error_verbosity: Full
+api_key_header_name: x-api-key
+api_keys:
+  - api-key-1
+  - api-key-2

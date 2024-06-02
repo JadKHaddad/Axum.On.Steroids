@@ -1,3 +1,4 @@
+pub mod cli_args;
 pub mod error;
 pub mod extractor;
 mod middleware;
