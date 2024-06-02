@@ -24,7 +24,7 @@ where
         let header_name = state.api_key_header_name();
         let headers = &parts.headers;
 
-        let used_api_key = headers
+        let api_key = headers
             .get(header_name)
             .ok_or_else(|| {
                 tracing::warn!("Rejection. API key not found");
@@ -38,10 +38,10 @@ where
                 ApiKeyError::new(verbosity, ApiKeyErrorType::InvalidFromat)
             })?;
 
-        tracing::trace!(%used_api_key, "Extracted");
+        tracing::trace!(%api_key, "Extracted");
 
-        let used_api_key = used_api_key.to_string();
+        let api_key = api_key.to_string();
 
-        Ok(ApiKey(UsedApiKey { used_api_key }))
+        Ok(ApiKey(UsedApiKey { api_key }))
     }
 }

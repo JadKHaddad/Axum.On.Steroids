@@ -22,18 +22,18 @@ where
     async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
         let verbosity = state.error_verbosity();
 
-        let ApiKey(UsedApiKey { used_api_key }) = ApiKey::from_request_parts(parts, state).await?;
+        let ApiKey(UsedApiKey { api_key }) = ApiKey::from_request_parts(parts, state).await?;
 
-        if !state.api_key_validate(&used_api_key) {
-            tracing::warn!(%used_api_key, "Rejection. Invalid API key");
+        if !state.api_key_validate(&api_key) {
+            tracing::warn!(%api_key, "Rejection. Invalid API key");
 
             return Err(ApiKeyError::new(verbosity, ApiKeyErrorType::Invalid).into());
         }
 
-        tracing::trace!(%used_api_key, "Validated");
+        tracing::trace!(%api_key, "Validated");
 
-        let used_api_key = used_api_key.to_string();
+        let api_key = api_key.to_string();
 
-        Ok(ValidApiKey(UsedApiKey { used_api_key }))
+        Ok(ValidApiKey(UsedApiKey { api_key }))
     }
 }

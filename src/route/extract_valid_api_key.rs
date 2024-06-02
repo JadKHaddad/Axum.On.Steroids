@@ -25,6 +25,6 @@ pub async fn extract_valid_api_key_using_extractor(
     ValidApiKey(key): ValidApiKey,
 ) -> ExtractValidApiKeyResponse {
     ExtractValidApiKeyResponse {
-        used_valid_api_key: key.used_api_key,
+        used_valid_api_key: key.api_key,
     }
 }

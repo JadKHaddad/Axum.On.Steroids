@@ -1,6 +1,6 @@
 use std::{ops::Deref, sync::Arc};
 
-use crate::{error::ErrorVerbosity, traits::StateProvider};
+use crate::{error::ErrorVerbosity, traits::StateProvider, types::used_api_key::UsedApiKey};
 
 #[derive(Clone)]
 pub struct ApiState {
@@ -11,7 +11,7 @@ impl ApiState {
     pub fn new(
         error_verbosity: ErrorVerbosity,
         api_key_header_name: String,
-        api_keys: Vec<String>,
+        api_keys: Vec<UsedApiKey>,
     ) -> Self {
         Self {
             inner: Arc::new(ApiStateInner {
@@ -34,7 +34,7 @@ impl Deref for ApiState {
 pub struct ApiStateInner {
     error_verbosity: ErrorVerbosity,
     api_key_header_name: String,
-    api_keys: Vec<String>,
+    api_keys: Vec<UsedApiKey>,
 }
 
 impl StateProvider for ApiState {
@@ -48,7 +48,7 @@ impl StateProvider for ApiState {
 
     fn api_key_validate(&self, key: &str) -> bool {
         for valid_key in self.api_keys.iter() {
-            if valid_key == key {
+            if valid_key.api_key == key {
                 return true;
             }
         }

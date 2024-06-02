@@ -27,6 +27,7 @@ use crate::{
         extract_valid_api_key_optional, post_json,
     },
     state::ApiState,
+    types::used_api_key::UsedApiKey,
 };
 
 #[derive(Debug, Deserialize)]
@@ -34,24 +35,10 @@ pub struct ServerConfig {
     socket_address: SocketAddr,
     error_verbosity: ErrorVerbosity,
     api_key_header_name: String,
-    api_keys: Vec<String>,
+    api_keys: Vec<UsedApiKey>,
 }
 
 impl ServerConfig {
-    pub fn new(
-        socket_address: SocketAddr,
-        error_verbosity: ErrorVerbosity,
-        api_key_header_name: String,
-        api_keys: Vec<String>,
-    ) -> Self {
-        Self {
-            socket_address,
-            error_verbosity,
-            api_key_header_name,
-            api_keys,
-        }
-    }
-
     pub async fn from_config_file(path: impl AsRef<Path>) -> anyhow::Result<Self> {
         let config_file = tokio::fs::read_to_string(path)
             .await
