@@ -1,7 +1,10 @@
+use derivative::Derivative;
+
 /// A struct to hold the used basic auth.
-#[derive(Debug, Clone)]
+#[derive(Derivative, Clone)]
+#[derivative(Debug)]
 pub struct UsedBasicAuth {
     pub username: String,
-    // TODO: add mask for password
+    #[derivative(Debug(format_with = "crate::utils::mask_fmt"))]
     pub password: Option<String>,
 }

@@ -36,6 +36,7 @@ utoipa-redoc = { version = "4.0.0", features = ["axum"] }
 utoipa-rapidoc = { version = "4.0.0", features = ["axum"] }
 
 derive_more = { version = "0.99.17", features = ["from"] }
+derivative = "2.2.0"
 
 schemars = { version = "0.8.21" }
 
