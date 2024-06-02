@@ -1,7 +1,8 @@
 use derivative::Derivative;
+use serde::Deserialize;
 
 /// A struct to hold the used basic auth.
-#[derive(Derivative, Clone)]
+#[derive(Derivative, Clone, Deserialize)]
 #[derivative(Debug)]
 pub struct UsedBasicAuth {
     pub username: String,

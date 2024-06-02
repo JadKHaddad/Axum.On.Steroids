@@ -33,9 +33,9 @@ where
             })?
             .to_str()
             .map_err(|err| {
-                tracing::warn!(%err, "Rejection. API key header value is not valid ASCII string");
+                tracing::warn!(%err, "Rejection. API key contains invalid characters");
 
-                ApiKeyError::new(verbosity, ApiKeyErrorType::InvalidFromat)
+                ApiKeyError::new(verbosity, ApiKeyErrorType::InvalidChars)
             })?;
 
         tracing::trace!(%api_key, "Extracted");

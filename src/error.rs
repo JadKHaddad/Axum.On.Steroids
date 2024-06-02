@@ -136,7 +136,7 @@ impl ApiError {
             ApiError::MethodNotAllowed(_) => String::from("Method not allowed"),
             ApiError::NotFound(_) => String::from("The requested resource was not found"),
             ApiError::ApiKey(err) => err.message(),
-            ApiError::BasicAuth(_) => String::from("Failed to perform basic auth"),
+            ApiError::BasicAuth(err) => err.message(),
         }
     }
 
@@ -305,7 +305,7 @@ impl NotFoundError {
 #[derive(Debug, Serialize)]
 pub enum ApiKeyErrorType {
     Missing,
-    InvalidFromat,
+    InvalidChars,
     Invalid,
 }
 
@@ -330,11 +330,9 @@ impl ApiKeyError {
 
     fn reason(api_key_error_type: &ApiKeyErrorType) -> String {
         match api_key_error_type {
-            ApiKeyErrorType::Missing => String::from("API key not found"),
-            ApiKeyErrorType::InvalidFromat => {
-                String::from("API key header value is not valid ASCII string")
-            }
-            ApiKeyErrorType::Invalid => String::from("Invalid API key"),
+            ApiKeyErrorType::Missing => String::from("API key is missing"),
+            ApiKeyErrorType::InvalidChars => String::from("API key contains invalid characters"),
+            ApiKeyErrorType::Invalid => String::from("API key invalid"),
         }
     }
 
@@ -352,20 +350,64 @@ impl ApiKeyError {
     fn status_code(&self) -> StatusCode {
         match self.api_key_error_type {
             ApiKeyErrorType::Missing => StatusCode::UNAUTHORIZED,
-            ApiKeyErrorType::InvalidFromat => StatusCode::UNAUTHORIZED,
+            ApiKeyErrorType::InvalidChars => StatusCode::UNAUTHORIZED,
             ApiKeyErrorType::Invalid => StatusCode::FORBIDDEN,
         }
     }
 }
 
 #[derive(Debug, Serialize)]
+pub enum BasicAuthErrorType {
+    Missing,
+    InvalidChars,
+    Decode {
+        #[serde(skip)]
+        reason: String,
+    },
+    NotBasic,
+    Invalid,
+}
+
+#[derive(Debug, Serialize)]
 pub struct BasicAuthError {
     #[serde(skip)]
-    pub(crate) verbosity: ErrorVerbosity,
-    pub(crate) basic_auth_error_reason: String,
+    verbosity: ErrorVerbosity,
+    basic_auth_error_type: BasicAuthErrorType,
+    basic_auth_error_reason: String,
 }
 
 impl BasicAuthError {
+    pub fn new(verbosity: ErrorVerbosity, basic_auth_error_type: BasicAuthErrorType) -> Self {
+        let basic_auth_error_reason = Self::reason(&basic_auth_error_type);
+
+        BasicAuthError {
+            verbosity,
+            basic_auth_error_type,
+            basic_auth_error_reason,
+        }
+    }
+
+    fn reason(basic_auth_error_type: &BasicAuthErrorType) -> String {
+        match basic_auth_error_type {
+            BasicAuthErrorType::Missing => String::from("`Authorization` header is missing"),
+            BasicAuthErrorType::InvalidChars => {
+                String::from("`Authorization` header contains invalid characters")
+            }
+            BasicAuthErrorType::Decode { reason } => {
+                format!("`Authorization` header could not be decoded: {reason}")
+            }
+            BasicAuthErrorType::NotBasic => String::from("`Authorization` header must be `Basic`"),
+            BasicAuthErrorType::Invalid => String::from("`Authorization` header is invalid"),
+        }
+    }
+
+    fn message(&self) -> String {
+        match self.verbosity {
+            ErrorVerbosity::None => String::new(),
+            _ => self.basic_auth_error_reason.clone(),
+        }
+    }
+
     fn status_code(&self) -> StatusCode {
         StatusCode::UNAUTHORIZED
     }

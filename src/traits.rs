@@ -9,4 +9,7 @@ pub trait StateProvider {
 
     /// Validates the API key.
     fn api_key_validate(&self, key: &str) -> bool;
+
+    /// Authenticates the basic auth.
+    fn basic_auth_authenticate(&self, username: &str, password: Option<&str>) -> bool;
 }

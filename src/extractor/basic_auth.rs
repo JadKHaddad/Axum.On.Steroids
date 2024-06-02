@@ -1,8 +1,12 @@
-use axum::{async_trait, extract::FromRequestParts, http::request::Parts};
-use axum_auth::AuthBasic;
+use axum::{
+    async_trait,
+    extract::FromRequestParts,
+    http::{header::AUTHORIZATION, request::Parts},
+};
+use base64::Engine;
 
 use crate::{
-    error::{ApiError, BasicAuthError},
+    error::{ApiError, BasicAuthError, BasicAuthErrorType},
     traits::StateProvider,
     types::used_basic_auth::UsedBasicAuth,
 };
@@ -20,29 +24,61 @@ where
 
     #[tracing::instrument(name = "basic_auth_extractor", skip_all)]
     async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
-        let auth_basic = AuthBasic::from_request_parts(parts, state).await;
+        let verbosity = state.error_verbosity();
 
-        match auth_basic {
-            Ok(AuthBasic((username, password))) => {
-                let used_basic_auth = UsedBasicAuth { username, password };
+        let authorization = parts
+            .headers
+            .get(AUTHORIZATION)
+            .ok_or_else(|| {
+                tracing::warn!("Rejection. Authorization header not found");
 
-                tracing::trace!(?used_basic_auth, "Extracted");
+                BasicAuthError::new(verbosity, BasicAuthErrorType::Missing)
+            })?
+            .to_str()
+            .map_err(|err| {
+                tracing::warn!(%err, "Rejection. Authorization header contains invalid characters");
 
-                Ok(ApiBasicAuth(used_basic_auth))
+                BasicAuthError::new(verbosity, BasicAuthErrorType::InvalidChars)
+            })?;
+
+        let split = authorization.split_once(' ');
+        let encoded_basic = match split {
+            Some(("Basic", encoded_basic)) => encoded_basic,
+            _ => {
+                tracing::warn!("Rejection. Authorization header is not 'Basic'");
+
+                return Err(BasicAuthError::new(verbosity, BasicAuthErrorType::NotBasic).into());
             }
-            Err(auth_basic_rejection) => {
-                tracing::warn!(rejection=?auth_basic_rejection, "Rejection");
+        };
 
-                let verbosity = state.error_verbosity();
+        let decoded = base64::engine::general_purpose::STANDARD
+            .decode(encoded_basic)
+            .map_err(|err| {
+                tracing::warn!(%err, "Rejection. Authorization header could not be decoded");
 
-                let basic_auth_error_reason = auth_basic_rejection.1.to_string();
-
-                Err(BasicAuthError {
+                BasicAuthError::new(
                     verbosity,
-                    basic_auth_error_reason,
-                }
-                .into())
-            }
-        }
+                    BasicAuthErrorType::Decode {
+                        reason: err.to_string(),
+                    },
+                )
+            })?;
+
+        let decoded = String::from_utf8(decoded).map_err(|err| {
+            tracing::warn!(%err, "Rejection. Decoded authorization header contains invalid characters");
+
+            BasicAuthError::new(verbosity, BasicAuthErrorType::InvalidChars)
+        })?;
+
+        let (username, password) = match decoded.split_once(':') {
+            Some((username, password)) => (username.to_string(), Some(password.to_string())),
+            None => (decoded.to_string(), None),
+        };
+
+        let used_basic_auth = UsedBasicAuth { username, password };
+
+        tracing::trace!(?used_basic_auth, "Extracted");
+
+        Ok(ApiBasicAuth(used_basic_auth))
     }
 }

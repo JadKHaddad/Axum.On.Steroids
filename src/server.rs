@@ -23,11 +23,11 @@ use crate::{
         trace_response_body::trace_response_body, validate_api_key_and_put_as_extension,
     },
     route::{
-        api_key_protected, extract_api_key, extract_basic_auth, extract_valid_api_key,
-        extract_valid_api_key_optional, post_json,
+        api_key_protected, extract_api_key, extract_authenticated_basic_auth, extract_basic_auth,
+        extract_valid_api_key, extract_valid_api_key_optional, post_json,
     },
     state::ApiState,
-    types::used_api_key::UsedApiKey,
+    types::{used_api_key::UsedApiKey, used_basic_auth::UsedBasicAuth},
 };
 
 #[derive(Debug, Deserialize)]
@@ -36,6 +36,7 @@ pub struct ServerConfig {
     error_verbosity: ErrorVerbosity,
     api_key_header_name: String,
     api_keys: Vec<UsedApiKey>,
+    basic_auth_users: Vec<UsedBasicAuth>,
 }
 
 impl ServerConfig {
@@ -65,6 +66,7 @@ impl Server {
             self.config.error_verbosity,
             self.config.api_key_header_name,
             self.config.api_keys,
+            self.config.basic_auth_users,
         );
 
         let post_json_app = Router::new().route(
@@ -92,6 +94,10 @@ impl Server {
             .nest("/api_key_protected", api_key_protected_app)
             .nest("/post_json", post_json_app)
             .route("/", get(|| async { "Index" }))
+            .route(
+                "/extract_authenticated_basic_auth_using_extractor",
+                get(extract_authenticated_basic_auth::extract_authenticated_basic_auth_using_extractor),
+            )
             .route(
                 "/extract_basic_auth_using_extractor",
                 get(extract_basic_auth::extract_basic_auth_using_extractor),

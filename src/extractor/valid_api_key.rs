@@ -32,8 +32,6 @@ where
 
         tracing::trace!(%api_key, "Validated");
 
-        let api_key = api_key.to_string();
-
         Ok(ValidApiKey(UsedApiKey { api_key }))
     }
 }
