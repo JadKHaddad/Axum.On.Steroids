@@ -1,5 +1,5 @@
 use axum::{
-    http::StatusCode,
+    http::{HeaderMap, HeaderValue, StatusCode},
     response::{IntoResponse, Response},
     Json,
 };
@@ -44,24 +44,30 @@ impl From<ApiErrorResponse> for ApiErrorMessage {
 
 impl IntoResponse for ApiErrorResponse {
     fn into_response(mut self) -> Response {
+        let headers = self.error.headers();
+
         match self.error.verbosity() {
             ErrorVerbosity::None => StatusCode::NO_CONTENT.into_response(),
-            ErrorVerbosity::StatusCode => self.error.status_code().into_response(),
+            ErrorVerbosity::StatusCode => {
+                let status_code = self.error.status_code();
+
+                (status_code, headers).into_response()
+            }
             ErrorVerbosity::Message => {
                 let status_code = self.error.status_code();
 
-                (status_code, Json(ApiErrorMessage::from(self))).into_response()
+                (status_code, headers, Json(ApiErrorMessage::from(self))).into_response()
             }
             ErrorVerbosity::Type => {
                 self.error.clear();
                 let status_code = self.error.status_code();
 
-                (status_code, Json(self)).into_response()
+                (status_code, headers, Json(self)).into_response()
             }
             ErrorVerbosity::Full => {
                 let status_code = self.error.status_code();
 
-                (status_code, Json(self)).into_response()
+                (status_code, headers, Json(self)).into_response()
             }
         }
     }
@@ -95,6 +101,10 @@ pub enum ApiError {
     ///
     /// This error is returned when the API key is not as expected.
     ApiKey(ApiKeyError),
+    /// Basic auth error
+    ///
+    /// This error is returned when the basic auth is not as expected.
+    BasicAuth(BasicAuthError),
 }
 
 impl ApiError {
@@ -106,6 +116,7 @@ impl ApiError {
             ApiError::Path(err) => err.verbosity,
             ApiError::MethodNotAllowed(err) => err.verbosity,
             ApiError::ApiKey(err) => err.verbosity,
+            ApiError::BasicAuth(err) => err.verbosity,
         }
     }
 
@@ -119,6 +130,7 @@ impl ApiError {
             ApiError::Path(_) => String::from("Failed to parse path parameters"),
             ApiError::MethodNotAllowed(_) => String::from("Method not allowed"),
             ApiError::ApiKey(err) => err.message(),
+            ApiError::BasicAuth(_) => String::from("Failed to perform basic auth"),
         }
     }
 
@@ -130,6 +142,7 @@ impl ApiError {
             ApiError::Path(err) => err.clear(),
             ApiError::MethodNotAllowed(_) => {}
             ApiError::ApiKey(err) => err.clear(),
+            ApiError::BasicAuth(err) => err.clear(),
         }
     }
 
@@ -141,7 +154,19 @@ impl ApiError {
             ApiError::Path(err) => err.status_code(),
             ApiError::MethodNotAllowed(err) => err.status_code(),
             ApiError::ApiKey(err) => err.status_code(),
+            ApiError::BasicAuth(err) => err.status_code(),
         }
+    }
+
+    fn headers(&self) -> HeaderMap {
+        let mut headers = HeaderMap::new();
+        match self {
+            ApiError::BasicAuth(_) => {
+                headers.insert("WWW-Authenticate", HeaderValue::from_static("Basic"));
+            }
+            _ => {}
+        }
+        headers
     }
 }
 
@@ -310,5 +335,22 @@ impl ApiKeyError {
             ApiKeyErrorType::InvalidFromat => StatusCode::UNAUTHORIZED,
             ApiKeyErrorType::Invalid => StatusCode::FORBIDDEN,
         }
+    }
+}
+
+#[derive(Debug, Serialize)]
+pub struct BasicAuthError {
+    #[serde(skip)]
+    pub(crate) verbosity: ErrorVerbosity,
+    pub(crate) basic_auth_error_reason: String,
+}
+
+impl BasicAuthError {
+    fn status_code(&self) -> StatusCode {
+        StatusCode::UNAUTHORIZED
+    }
+
+    fn clear(&mut self) {
+        self.basic_auth_error_reason.clear();
     }
 }

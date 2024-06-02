@@ -22,8 +22,8 @@ use crate::{
         trace_response_body::trace_response_body, validate_api_key_and_put_as_extension,
     },
     route::{
-        api_key_protected, extract_api_key, extract_valid_api_key, extract_valid_api_key_optional,
-        post_json,
+        api_key_protected, extract_api_key, extract_basic_auth, extract_valid_api_key,
+        extract_valid_api_key_optional, post_json,
     },
     state::ApiState,
 };
@@ -91,6 +91,10 @@ impl Server {
             .nest("/api_key_protected", api_key_protected_app)
             .nest("/post_json", post_json_app)
             .route("/", get(|| async { "Index" }))
+            .route(
+                "/extract_basic_auth_using_extractor",
+                get(extract_basic_auth::extract_basic_auth_using_extractor),
+            )
             .route(
                 "/extract_api_key_using_extractor",
                 get(extract_api_key::extract_api_key_using_extractor),
