@@ -347,7 +347,10 @@ impl NotFoundError {
 #[derive(Debug, Serialize)]
 pub enum ApiKeyErrorType {
     Missing,
-    InvalidChars,
+    InvalidChars {
+        #[serde(skip)]
+        reason: String,
+    },
     Invalid,
 }
 
@@ -375,7 +378,9 @@ impl ApiKeyError {
     fn reason(api_key_error_type: &ApiKeyErrorType) -> String {
         match api_key_error_type {
             ApiKeyErrorType::Missing => String::from("API key is missing"),
-            ApiKeyErrorType::InvalidChars => String::from("API key contains invalid characters"),
+            ApiKeyErrorType::InvalidChars { reason } => {
+                format!("API key contains invalid characters: {reason}")
+            }
             ApiKeyErrorType::Invalid => String::from("API key invalid"),
         }
     }
@@ -383,7 +388,7 @@ impl ApiKeyError {
     fn status_code(&self) -> StatusCode {
         match self.api_key_error_type {
             ApiKeyErrorType::Missing => StatusCode::UNAUTHORIZED,
-            ApiKeyErrorType::InvalidChars => StatusCode::UNAUTHORIZED,
+            ApiKeyErrorType::InvalidChars { .. } => StatusCode::UNAUTHORIZED,
             ApiKeyErrorType::Invalid => StatusCode::FORBIDDEN,
         }
     }
@@ -392,7 +397,10 @@ impl ApiKeyError {
 #[derive(Debug, Serialize)]
 pub enum BasicAuthErrorType {
     Missing,
-    InvalidChars,
+    InvalidChars {
+        #[serde(skip)]
+        reason: String,
+    },
     Decode {
         #[serde(skip)]
         reason: String,
@@ -425,8 +433,8 @@ impl BasicAuthError {
     fn reason(basic_auth_error_type: &BasicAuthErrorType) -> String {
         match basic_auth_error_type {
             BasicAuthErrorType::Missing => String::from("`Authorization` header is missing"),
-            BasicAuthErrorType::InvalidChars => {
-                String::from("`Authorization` header contains invalid characters")
+            BasicAuthErrorType::InvalidChars { reason } => {
+                format!("`Authorization` header contains invalid characters: {reason}")
             }
             BasicAuthErrorType::Decode { reason } => {
                 format!("`Authorization` header could not be decoded: {reason}")

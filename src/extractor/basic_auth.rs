@@ -38,7 +38,12 @@ where
             .map_err(|err| {
                 tracing::warn!(%err, "Rejection. Authorization header contains invalid characters");
 
-                BasicAuthError::new(verbosity, BasicAuthErrorType::InvalidChars)
+                BasicAuthError::new(
+                    verbosity,
+                    BasicAuthErrorType::InvalidChars {
+                        reason: err.to_string(),
+                    },
+                )
             })?;
 
         let split = authorization.split_once(' ');
@@ -67,7 +72,7 @@ where
         let decoded = String::from_utf8(decoded).map_err(|err| {
             tracing::warn!(%err, "Rejection. Decoded authorization header contains invalid characters");
 
-            BasicAuthError::new(verbosity, BasicAuthErrorType::InvalidChars)
+            BasicAuthError::new(verbosity, BasicAuthErrorType::InvalidChars { reason: err.to_string() })
         })?;
 
         let (username, password) = match decoded.split_once(':') {
