@@ -1,3 +1,5 @@
+use std::borrow::Cow;
+
 use axum::{
     http::{HeaderMap, HeaderValue, StatusCode},
     response::{IntoResponse, Response},
@@ -359,7 +361,7 @@ pub struct ApiKeyError {
     #[serde(skip)]
     verbosity: ErrorVerbosity,
     api_key_error_type: ApiKeyErrorType,
-    api_key_error_reason: Option<String>,
+    api_key_error_reason: Option<Cow<'static, str>>,
 }
 
 impl ApiKeyError {
@@ -375,13 +377,13 @@ impl ApiKeyError {
         }
     }
 
-    fn reason(api_key_error_type: &ApiKeyErrorType) -> String {
+    fn reason(api_key_error_type: &ApiKeyErrorType) -> Cow<'static, str> {
         match api_key_error_type {
-            ApiKeyErrorType::Missing => String::from("API key is missing"),
+            ApiKeyErrorType::Missing => Cow::Borrowed("API key is missing"),
             ApiKeyErrorType::InvalidChars { reason } => {
-                format!("API key contains invalid characters: {reason}")
+                Cow::Owned(format!("API key contains invalid characters: {reason}"))
             }
-            ApiKeyErrorType::Invalid => String::from("API key invalid"),
+            ApiKeyErrorType::Invalid => Cow::Borrowed("API key invalid"),
         }
     }
 
@@ -414,7 +416,7 @@ pub struct BasicAuthError {
     #[serde(skip)]
     verbosity: ErrorVerbosity,
     basic_auth_error_type: BasicAuthErrorType,
-    basic_auth_error_reason: Option<String>,
+    basic_auth_error_reason: Option<Cow<'static, str>>,
 }
 
 impl BasicAuthError {
@@ -430,17 +432,17 @@ impl BasicAuthError {
         }
     }
 
-    fn reason(basic_auth_error_type: &BasicAuthErrorType) -> String {
+    fn reason(basic_auth_error_type: &BasicAuthErrorType) -> Cow<'static, str> {
         match basic_auth_error_type {
-            BasicAuthErrorType::Missing => String::from("`Authorization` header is missing"),
-            BasicAuthErrorType::InvalidChars { reason } => {
-                format!("`Authorization` header contains invalid characters: {reason}")
-            }
-            BasicAuthErrorType::Decode { reason } => {
-                format!("`Authorization` header could not be decoded: {reason}")
-            }
-            BasicAuthErrorType::NotBasic => String::from("`Authorization` header must be `Basic`"),
-            BasicAuthErrorType::Invalid => String::from("`Authorization` header is invalid"),
+            BasicAuthErrorType::Missing => Cow::Borrowed("`Authorization` header is missing"),
+            BasicAuthErrorType::InvalidChars { reason } => Cow::Owned(format!(
+                "`Authorization` header contains invalid characters: {reason}"
+            )),
+            BasicAuthErrorType::Decode { reason } => Cow::Owned(format!(
+                "`Authorization` header could not be decoded: {reason}"
+            )),
+            BasicAuthErrorType::NotBasic => Cow::Borrowed("`Authorization` header must be `Basic`"),
+            BasicAuthErrorType::Invalid => Cow::Borrowed("`Authorization` header is invalid"),
         }
     }
 
