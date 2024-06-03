@@ -23,8 +23,25 @@ pub enum ErrorVerbosity {
     Full,
 }
 
+impl ErrorVerbosity {
+    pub fn should_generate_message(&self) -> bool {
+        match self {
+            ErrorVerbosity::Message | ErrorVerbosity::Type | ErrorVerbosity::Full => true,
+            _ => false,
+        }
+    }
+
+    pub fn should_generate_error_reason(&self) -> bool {
+        match self {
+            ErrorVerbosity::Full => true,
+            _ => false,
+        }
+    }
+}
+
 #[derive(Debug, Serialize, ToSchema)]
 struct ApiErrorResponse {
+    #[serde(flatten)]
     error: ApiError,
     message: &'static str,
 }
@@ -43,7 +60,7 @@ impl From<ApiErrorResponse> for ApiErrorMessage {
 }
 
 impl IntoResponse for ApiErrorResponse {
-    fn into_response(mut self) -> Response {
+    fn into_response(self) -> Response {
         let headers = self.error.headers();
 
         match self.error.verbosity() {
@@ -59,7 +76,6 @@ impl IntoResponse for ApiErrorResponse {
                 (status_code, headers, Json(ApiErrorMessage::from(self))).into_response()
             }
             ErrorVerbosity::Type => {
-                self.error.clear();
                 let status_code = self.error.status_code();
 
                 (status_code, headers, Json(self)).into_response()
@@ -74,7 +90,7 @@ impl IntoResponse for ApiErrorResponse {
 }
 
 #[derive(Debug, From, Serialize, ToSchema)]
-#[serde(tag = "type", content = "error")]
+#[serde(tag = "error_type", content = "error")]
 /// API error
 pub enum ApiError {
     /// Internal server error
@@ -129,25 +145,12 @@ impl ApiError {
         match self {
             ApiError::InternalServerError(_) => "An internal server error has occurred",
             ApiError::Query(_) => "Failed to parse query parameters",
-            ApiError::Body(_) => "Failed to parse body",
+            ApiError::Body(_) => "Failed to parse request body",
             ApiError::Path(_) => "Failed to parse path parameters",
             ApiError::MethodNotAllowed(_) => "Method not allowed",
             ApiError::NotFound(_) => "The requested resource was not found",
             ApiError::ApiKey(_) => "API key error",
             ApiError::BasicAuth(_) => "Basic auth error",
-        }
-    }
-
-    fn clear(&mut self) {
-        match self {
-            ApiError::InternalServerError(err) => err.clear(),
-            ApiError::Query(err) => err.clear(),
-            ApiError::Body(err) => err.clear(),
-            ApiError::Path(err) => err.clear(),
-            ApiError::MethodNotAllowed(_) => {}
-            ApiError::NotFound(_) => {}
-            ApiError::ApiKey(err) => err.clear(),
-            ApiError::BasicAuth(err) => err.clear(),
         }
     }
 
@@ -199,7 +202,7 @@ impl IntoResponse for ApiError {
 pub struct InternalServerError {
     #[serde(skip)]
     verbosity: ErrorVerbosity,
-    internal_server_error: String,
+    internal_server_error: Option<String>,
 }
 
 impl InternalServerError {
@@ -208,14 +211,12 @@ impl InternalServerError {
         let err = format!("{err:#}");
         tracing::error!(%err, "Internal server error");
 
+        let internal_server_error = verbosity.should_generate_error_reason().then(|| err);
+
         InternalServerError {
             verbosity,
-            internal_server_error: err,
+            internal_server_error,
         }
-    }
-
-    fn clear(&mut self) {
-        self.internal_server_error.clear();
     }
 
     fn status_code(&self) -> StatusCode {
@@ -227,8 +228,8 @@ impl InternalServerError {
 pub struct QueryError {
     #[serde(skip)]
     verbosity: ErrorVerbosity,
-    query_error_reason: String,
-    query_expected_schema: String,
+    query_error_reason: Option<String>,
+    query_expected_schema: Option<String>,
 }
 
 impl QueryError {
@@ -237,16 +238,17 @@ impl QueryError {
         query_error_reason: String,
         query_expected_schema: String,
     ) -> Self {
+        let (query_error_reason, query_expected_schema) =
+            match verbosity.should_generate_error_reason() {
+                true => (Some(query_error_reason), Some(query_expected_schema)),
+                false => (None, None),
+            };
+
         QueryError {
             verbosity,
             query_error_reason,
             query_expected_schema,
         }
-    }
-
-    fn clear(&mut self) {
-        self.query_error_reason.clear();
-        self.query_expected_schema.clear();
     }
 
     fn status_code(&self) -> StatusCode {
@@ -258,8 +260,8 @@ impl QueryError {
 pub struct BodyError {
     #[serde(skip)]
     verbosity: ErrorVerbosity,
-    body_error_reason: String,
-    body_expected_schema: String,
+    body_error_reason: Option<String>,
+    body_expected_schema: Option<String>,
 }
 
 impl BodyError {
@@ -268,16 +270,17 @@ impl BodyError {
         body_error_reason: String,
         body_expected_schema: String,
     ) -> Self {
+        let (body_error_reason, body_expected_schema) =
+            match verbosity.should_generate_error_reason() {
+                true => (Some(body_error_reason), Some(body_expected_schema)),
+                false => (None, None),
+            };
+
         BodyError {
             verbosity,
             body_error_reason,
             body_expected_schema,
         }
-    }
-
-    fn clear(&mut self) {
-        self.body_error_reason.clear();
-        self.body_expected_schema.clear();
     }
 
     fn status_code(&self) -> StatusCode {
@@ -289,19 +292,19 @@ impl BodyError {
 pub struct PathError {
     #[serde(skip)]
     verbosity: ErrorVerbosity,
-    path_error_reason: String,
+    path_error_reason: Option<String>,
 }
 
 impl PathError {
     pub fn new(verbosity: ErrorVerbosity, path_error_reason: String) -> Self {
+        let path_error_reason = verbosity
+            .should_generate_error_reason()
+            .then(|| path_error_reason);
+
         PathError {
             verbosity,
             path_error_reason,
         }
-    }
-
-    fn clear(&mut self) {
-        self.path_error_reason.clear();
     }
 
     fn status_code(&self) -> StatusCode {
@@ -353,12 +356,14 @@ pub struct ApiKeyError {
     #[serde(skip)]
     verbosity: ErrorVerbosity,
     api_key_error_type: ApiKeyErrorType,
-    api_key_error_reason: String,
+    api_key_error_reason: Option<String>,
 }
 
 impl ApiKeyError {
     pub fn new(verbosity: ErrorVerbosity, api_key_error_type: ApiKeyErrorType) -> Self {
-        let api_key_error_reason = Self::reason(&api_key_error_type);
+        let api_key_error_reason = verbosity
+            .should_generate_error_reason()
+            .then(|| Self::reason(&api_key_error_type));
 
         ApiKeyError {
             verbosity,
@@ -373,10 +378,6 @@ impl ApiKeyError {
             ApiKeyErrorType::InvalidChars => String::from("API key contains invalid characters"),
             ApiKeyErrorType::Invalid => String::from("API key invalid"),
         }
-    }
-
-    fn clear(&mut self) {
-        self.api_key_error_reason.clear();
     }
 
     fn status_code(&self) -> StatusCode {
@@ -405,12 +406,14 @@ pub struct BasicAuthError {
     #[serde(skip)]
     verbosity: ErrorVerbosity,
     basic_auth_error_type: BasicAuthErrorType,
-    basic_auth_error_reason: String,
+    basic_auth_error_reason: Option<String>,
 }
 
 impl BasicAuthError {
     pub fn new(verbosity: ErrorVerbosity, basic_auth_error_type: BasicAuthErrorType) -> Self {
-        let basic_auth_error_reason = Self::reason(&basic_auth_error_type);
+        let basic_auth_error_reason = verbosity
+            .should_generate_error_reason()
+            .then(|| Self::reason(&basic_auth_error_type));
 
         BasicAuthError {
             verbosity,
@@ -435,9 +438,5 @@ impl BasicAuthError {
 
     fn status_code(&self) -> StatusCode {
         StatusCode::UNAUTHORIZED
-    }
-
-    fn clear(&mut self) {
-        self.basic_auth_error_reason.clear();
     }
 }
