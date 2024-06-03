@@ -42,11 +42,7 @@ where
 
                 let path_error_reason = path_rejection.body_text();
 
-                Err(PathError {
-                    verbosity,
-                    path_error_reason,
-                }
-                .into())
+                Err(PathError::new(verbosity, path_error_reason).into())
             }
         }
     }

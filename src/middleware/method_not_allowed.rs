@@ -21,10 +21,9 @@ pub async fn method_not_allowed(
     let status = resp.status();
 
     match status {
-        StatusCode::METHOD_NOT_ALLOWED => Err(MethodNotAllowedError {
-            verbosity: state.error_verbosity(),
+        StatusCode::METHOD_NOT_ALLOWED => {
+            Err(MethodNotAllowedError::new(state.error_verbosity()).into())
         }
-        .into()),
         _ => Ok(resp),
     }
 }

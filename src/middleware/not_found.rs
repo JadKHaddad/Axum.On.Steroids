@@ -7,9 +7,5 @@ use crate::{
 };
 
 pub async fn not_found(State(state): State<ApiState>) -> ApiError {
-    let error_verbosity = state.error_verbosity();
-
-    ApiError::NotFound(NotFoundError {
-        verbosity: error_verbosity,
-    })
+    ApiError::NotFound(NotFoundError::new(state.error_verbosity()))
 }

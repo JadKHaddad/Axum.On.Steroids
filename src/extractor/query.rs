@@ -45,12 +45,7 @@ where
                 let query_expected_schema = serde_yaml::to_string(&schema_for!(T))
                     .map_err(|err| InternalServerError::from_generic_error(verbosity, err))?;
 
-                Err(QueryError {
-                    verbosity,
-                    query_error_reason,
-                    query_expected_schema,
-                }
-                .into())
+                Err(QueryError::new(verbosity, query_error_reason, query_expected_schema).into())
             }
         }
     }

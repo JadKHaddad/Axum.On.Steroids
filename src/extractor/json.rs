@@ -44,12 +44,7 @@ where
                 let body_expected_schema = serde_yaml::to_string(&schema_for!(T))
                     .map_err(|err| InternalServerError::from_generic_error(verbosity, err))?;
 
-                Err(BodyError {
-                    verbosity,
-                    body_error_reason,
-                    body_expected_schema,
-                }
-                .into())
+                Err(BodyError::new(verbosity, body_error_reason, body_expected_schema).into())
             }
         }
     }

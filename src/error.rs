@@ -26,12 +26,12 @@ pub enum ErrorVerbosity {
 #[derive(Debug, Serialize, ToSchema)]
 struct ApiErrorResponse {
     error: ApiError,
-    message: String,
+    message: &'static str,
 }
 
 #[derive(Debug, Serialize)]
 struct ApiErrorMessage {
-    message: String,
+    message: &'static str,
 }
 
 impl From<ApiErrorResponse> for ApiErrorMessage {
@@ -125,18 +125,16 @@ impl ApiError {
         }
     }
 
-    fn message(&self) -> String {
+    fn message(&self) -> &'static str {
         match self {
-            ApiError::InternalServerError(_) => {
-                String::from("An internal server error has occurred")
-            }
-            ApiError::Query(_) => String::from("Failed to parse query parameters"),
-            ApiError::Body(_) => String::from("Failed to parse body"),
-            ApiError::Path(_) => String::from("Failed to parse path parameters"),
-            ApiError::MethodNotAllowed(_) => String::from("Method not allowed"),
-            ApiError::NotFound(_) => String::from("The requested resource was not found"),
-            ApiError::ApiKey(err) => err.message(),
-            ApiError::BasicAuth(err) => err.message(),
+            ApiError::InternalServerError(_) => "An internal server error has occurred",
+            ApiError::Query(_) => "Failed to parse query parameters",
+            ApiError::Body(_) => "Failed to parse body",
+            ApiError::Path(_) => "Failed to parse path parameters",
+            ApiError::MethodNotAllowed(_) => "Method not allowed",
+            ApiError::NotFound(_) => "The requested resource was not found",
+            ApiError::ApiKey(_) => "API key error",
+            ApiError::BasicAuth(_) => "Basic auth error",
         }
     }
 
@@ -168,12 +166,14 @@ impl ApiError {
 
     fn headers(&self) -> HeaderMap {
         let mut headers = HeaderMap::new();
+
         match self {
             ApiError::BasicAuth(_) => {
                 headers.insert("WWW-Authenticate", HeaderValue::from_static("Basic"));
             }
             _ => {}
         }
+
         headers
     }
 }
@@ -181,7 +181,7 @@ impl ApiError {
 impl From<ApiError> for ApiErrorResponse {
     fn from(error: ApiError) -> Self {
         let message = match error.verbosity() {
-            ErrorVerbosity::None => String::new(),
+            ErrorVerbosity::None => "",
             _ => error.message(),
         };
 
@@ -198,8 +198,8 @@ impl IntoResponse for ApiError {
 #[derive(Debug, Serialize)]
 pub struct InternalServerError {
     #[serde(skip)]
-    pub(crate) verbosity: ErrorVerbosity,
-    pub(crate) internal_server_error: String,
+    verbosity: ErrorVerbosity,
+    internal_server_error: String,
 }
 
 impl InternalServerError {
@@ -226,12 +226,24 @@ impl InternalServerError {
 #[derive(Debug, Serialize)]
 pub struct QueryError {
     #[serde(skip)]
-    pub(crate) verbosity: ErrorVerbosity,
-    pub(crate) query_error_reason: String,
-    pub(crate) query_expected_schema: String,
+    verbosity: ErrorVerbosity,
+    query_error_reason: String,
+    query_expected_schema: String,
 }
 
 impl QueryError {
+    pub fn new(
+        verbosity: ErrorVerbosity,
+        query_error_reason: String,
+        query_expected_schema: String,
+    ) -> Self {
+        QueryError {
+            verbosity,
+            query_error_reason,
+            query_expected_schema,
+        }
+    }
+
     fn clear(&mut self) {
         self.query_error_reason.clear();
         self.query_expected_schema.clear();
@@ -245,12 +257,24 @@ impl QueryError {
 #[derive(Debug, Serialize)]
 pub struct BodyError {
     #[serde(skip)]
-    pub(crate) verbosity: ErrorVerbosity,
-    pub(crate) body_error_reason: String,
-    pub(crate) body_expected_schema: String,
+    verbosity: ErrorVerbosity,
+    body_error_reason: String,
+    body_expected_schema: String,
 }
 
 impl BodyError {
+    pub fn new(
+        verbosity: ErrorVerbosity,
+        body_error_reason: String,
+        body_expected_schema: String,
+    ) -> Self {
+        BodyError {
+            verbosity,
+            body_error_reason,
+            body_expected_schema,
+        }
+    }
+
     fn clear(&mut self) {
         self.body_error_reason.clear();
         self.body_expected_schema.clear();
@@ -264,11 +288,18 @@ impl BodyError {
 #[derive(Debug, Serialize)]
 pub struct PathError {
     #[serde(skip)]
-    pub(crate) verbosity: ErrorVerbosity,
-    pub(crate) path_error_reason: String,
+    verbosity: ErrorVerbosity,
+    path_error_reason: String,
 }
 
 impl PathError {
+    pub fn new(verbosity: ErrorVerbosity, path_error_reason: String) -> Self {
+        PathError {
+            verbosity,
+            path_error_reason,
+        }
+    }
+
     fn clear(&mut self) {
         self.path_error_reason.clear();
     }
@@ -281,10 +312,14 @@ impl PathError {
 #[derive(Debug, Serialize)]
 pub struct MethodNotAllowedError {
     #[serde(skip)]
-    pub(crate) verbosity: ErrorVerbosity,
+    verbosity: ErrorVerbosity,
 }
 
 impl MethodNotAllowedError {
+    pub fn new(verbosity: ErrorVerbosity) -> Self {
+        MethodNotAllowedError { verbosity }
+    }
+
     fn status_code(&self) -> StatusCode {
         StatusCode::METHOD_NOT_ALLOWED
     }
@@ -293,10 +328,14 @@ impl MethodNotAllowedError {
 #[derive(Debug, Serialize)]
 pub struct NotFoundError {
     #[serde(skip)]
-    pub(crate) verbosity: ErrorVerbosity,
+    verbosity: ErrorVerbosity,
 }
 
 impl NotFoundError {
+    pub fn new(verbosity: ErrorVerbosity) -> Self {
+        NotFoundError { verbosity }
+    }
+
     fn status_code(&self) -> StatusCode {
         StatusCode::NOT_FOUND
     }
@@ -333,13 +372,6 @@ impl ApiKeyError {
             ApiKeyErrorType::Missing => String::from("API key is missing"),
             ApiKeyErrorType::InvalidChars => String::from("API key contains invalid characters"),
             ApiKeyErrorType::Invalid => String::from("API key invalid"),
-        }
-    }
-
-    fn message(&self) -> String {
-        match self.verbosity {
-            ErrorVerbosity::None => String::new(),
-            _ => self.api_key_error_reason.clone(),
         }
     }
 
@@ -398,13 +430,6 @@ impl BasicAuthError {
             }
             BasicAuthErrorType::NotBasic => String::from("`Authorization` header must be `Basic`"),
             BasicAuthErrorType::Invalid => String::from("`Authorization` header is invalid"),
-        }
-    }
-
-    fn message(&self) -> String {
-        match self.verbosity {
-            ErrorVerbosity::None => String::new(),
-            _ => self.basic_auth_error_reason.clone(),
         }
     }
 
