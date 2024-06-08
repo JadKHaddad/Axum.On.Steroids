@@ -5,9 +5,9 @@ use tokio::sync::RwLock;
 
 #[derive(Debug, thiserror::Error)]
 pub enum JwkError {
-    #[error("Failed to fetch JWKS from the JWKS URI: {0}")]
+    #[error("Failed to fetch Jwk from the Jwks URI: {0}")]
     Fetch(#[source] reqwest::Error),
-    #[error("Failed to parse JWKS from the JWKS URI: {0}")]
+    #[error("Failed to parse Jwk from the Jwks URI: {0}")]
     Parse(#[source] reqwest::Error),
 }
 
