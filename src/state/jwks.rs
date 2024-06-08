@@ -20,7 +20,12 @@ pub struct JwkRefresher {
 
 impl JwkRefresher {
     #[tracing::instrument(skip_all)]
-    async fn obtain_jwks(jwks_uri: &str, http_client: &reqwest::Client,) -> Result<JwkSet, JwkError> {
+    async fn obtain_jwks(
+        jwks_uri: &str,
+        http_client: &reqwest::Client,
+    ) -> Result<JwkSet, JwkError> {
+        tracing::info!("Obtaining Jwks");
+
         let jwks = http_client
             .get(jwks_uri)
             .send()
@@ -51,6 +56,8 @@ impl JwkRefresher {
 
     #[tracing::instrument(skip_all)]
     async fn refresh_jwks(&self) -> Result<(), JwkError> {
+        tracing::info!("Refreshing Jwks");
+
         let jwks = Self::obtain_jwks(&self.jwks_uri, &self.http_client).await?;
 
         let mut inner = self.holder.write().await;
@@ -69,7 +76,7 @@ impl JwkRefresher {
             self.refresh_jwks().await?;
         }
 
-       Ok(&self.holder)
+        Ok(&self.holder)
     }
 }
 

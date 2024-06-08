@@ -27,10 +27,7 @@ pub enum ErrorVerbosity {
 
 impl ErrorVerbosity {
     fn should_generate_error_reason(&self) -> bool {
-        match self {
-            ErrorVerbosity::Full => true,
-            _ => false,
-        }
+        matches!(self, ErrorVerbosity::Full)
     }
 }
 
@@ -216,7 +213,7 @@ impl InternalServerError {
         let err = format!("{err:#}");
         tracing::error!(%err, "Internal server error");
 
-        let internal_server_error = verbosity.should_generate_error_reason().then(|| err);
+        let internal_server_error = verbosity.should_generate_error_reason().then_some(err);
 
         InternalServerError {
             verbosity,
@@ -304,7 +301,7 @@ impl PathError {
     pub fn new(verbosity: ErrorVerbosity, path_error_reason: String) -> Self {
         let path_error_reason = verbosity
             .should_generate_error_reason()
-            .then(|| path_error_reason);
+            .then_some(path_error_reason);
 
         PathError {
             verbosity,
