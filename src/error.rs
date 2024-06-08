@@ -121,6 +121,10 @@ pub enum ApiError {
     ///
     /// This error is returned when the bearer token is not as expected.
     Bearer(BearerError),
+    /// JWT error
+    ///
+    /// This error is returned when the JWT is not as expected.
+    Jwt(JwtError),
 }
 
 impl ApiError {
@@ -135,6 +139,7 @@ impl ApiError {
             ApiError::ApiKey(err) => err.verbosity,
             ApiError::BasicAuth(err) => err.verbosity,
             ApiError::Bearer(err) => err.verbosity,
+            ApiError::Jwt(err) => err.verbosity,
         }
     }
 
@@ -149,6 +154,7 @@ impl ApiError {
             ApiError::ApiKey(_) => "API key error",
             ApiError::BasicAuth(_) => "Basic auth error",
             ApiError::Bearer(_) => "Bearer auth error",
+            ApiError::Jwt(_) => "JWT error",
         }
     }
 
@@ -163,6 +169,7 @@ impl ApiError {
             ApiError::ApiKey(err) => err.status_code(),
             ApiError::BasicAuth(err) => err.status_code(),
             ApiError::Bearer(err) => err.status_code(),
+            ApiError::Jwt(err) => err.status_code(),
         }
     }
 
@@ -173,7 +180,7 @@ impl ApiError {
             ApiError::BasicAuth(_) => {
                 headers.insert("WWW-Authenticate", HeaderValue::from_static("Basic"));
             }
-            ApiError::Bearer(_) => {
+            ApiError::Bearer(_) | ApiError::Jwt(_) => {
                 headers.insert("WWW-Authenticate", HeaderValue::from_static("Bearer"));
             }
             _ => {}
@@ -498,5 +505,51 @@ impl BearerError {
 
     fn status_code(&self) -> StatusCode {
         StatusCode::UNAUTHORIZED
+    }
+}
+
+#[derive(Debug, Serialize)]
+pub enum JwtErrorType {
+    Invalid {
+        #[serde(skip)]
+        reason: String,
+    },
+    /// User does not have a valid role
+    Forbidden,
+}
+
+#[derive(Debug, Serialize)]
+pub struct JwtError {
+    #[serde(skip)]
+    verbosity: ErrorVerbosity,
+    jwt_error_type: JwtErrorType,
+    jwt_error_reason: Option<Cow<'static, str>>,
+}
+
+impl JwtError {
+    pub fn new(verbosity: ErrorVerbosity, jwt_error_type: JwtErrorType) -> Self {
+        let jwt_error_reason = verbosity
+            .should_generate_error_reason()
+            .then(|| Self::reason(&jwt_error_type));
+
+        JwtError {
+            verbosity,
+            jwt_error_type,
+            jwt_error_reason,
+        }
+    }
+
+    fn reason(jwt_error_type: &JwtErrorType) -> Cow<'static, str> {
+        match jwt_error_type {
+            JwtErrorType::Invalid { reason } => Cow::Owned(format!("JWT is invalid: {reason}")),
+            JwtErrorType::Forbidden => Cow::Borrowed("User does not have a valid role"),
+        }
+    }
+
+    fn status_code(&self) -> StatusCode {
+        match self.jwt_error_type {
+            JwtErrorType::Invalid { .. } => StatusCode::UNAUTHORIZED,
+            JwtErrorType::Forbidden => StatusCode::FORBIDDEN,
+        }
     }
 }
