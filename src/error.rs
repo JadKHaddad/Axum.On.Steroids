@@ -434,15 +434,15 @@ impl BasicAuthError {
 
     fn reason(basic_auth_error_type: &BasicAuthErrorType) -> Cow<'static, str> {
         match basic_auth_error_type {
-            BasicAuthErrorType::Missing => Cow::Borrowed("`Authorization` header is missing"),
+            BasicAuthErrorType::Missing => Cow::Borrowed("Authorization header is missing"),
             BasicAuthErrorType::InvalidChars { reason } => Cow::Owned(format!(
-                "`Authorization` header contains invalid characters: {reason}"
+                "Authorization header contains invalid characters: {reason}"
             )),
             BasicAuthErrorType::Decode { reason } => Cow::Owned(format!(
-                "`Authorization` header could not be decoded: {reason}"
+                "Authorization header could not be decoded: {reason}"
             )),
-            BasicAuthErrorType::NotBasic => Cow::Borrowed("`Authorization` header must be `Basic`"),
-            BasicAuthErrorType::Invalid => Cow::Borrowed("`Authorization` header is invalid"),
+            BasicAuthErrorType::NotBasic => Cow::Borrowed("Authorization header must be Basic"),
+            BasicAuthErrorType::Invalid => Cow::Borrowed("Basic auth is invalid"),
         }
     }
 
