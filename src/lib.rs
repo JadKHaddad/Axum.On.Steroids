@@ -1,3 +1,4 @@
+mod claims;
 pub mod cli_args;
 mod error;
 mod extractor;

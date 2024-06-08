@@ -3,6 +3,7 @@ pub mod authenticated_basic_auth;
 pub mod basic_auth;
 pub mod bearer_token;
 pub mod json;
+pub mod jwt;
 pub mod optional;
 pub mod path;
 pub mod query;

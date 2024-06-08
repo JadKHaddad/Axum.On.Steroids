@@ -25,7 +25,8 @@ use crate::{
     openid_configuration::OpenIdConfiguration,
     route::{
         api_key_protected, extract_api_key, extract_authenticated_basic_auth, extract_basic_auth,
-        extract_bearer_token, extract_valid_api_key, extract_valid_api_key_optional, post_json,
+        extract_bearer_token, extract_jwt_claims, extract_valid_api_key,
+        extract_valid_api_key_optional, post_json,
     },
     state::ApiState,
     types::{used_api_key::UsedApiKey, used_basic_auth::UsedBasicAuth},
@@ -126,6 +127,10 @@ impl Server {
             .nest("/api_key_protected", api_key_protected_app)
             .nest("/post_json", post_json_app)
             .route("/", get(|| async { "Index" }))
+            .route(
+                "/extract_valid_jwt_claims_using_extractor",
+                get(extract_jwt_claims::extract_valid_jwt_claims_using_extractor),
+            )
             .route(
                 "/extract_bearer_token_using_extractor",
                 get(extract_bearer_token::extract_bearer_token_using_extractor),

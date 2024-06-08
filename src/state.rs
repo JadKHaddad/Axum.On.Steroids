@@ -106,7 +106,7 @@ impl StateProvider for ApiState {
         false
     }
 
-    async fn jwt_validate<C, E>(&self, jwt: &str) -> Result<C, Self::JwtValidationError>
+    async fn jwt_validate<C>(&self, jwt: &str) -> Result<C, Self::JwtValidationError>
     where
         C: DeserializeOwned,
     {

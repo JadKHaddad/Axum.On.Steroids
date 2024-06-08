@@ -1,9 +1,11 @@
+use std::future::Future;
+
 use serde::de::DeserializeOwned;
 
 use crate::error::ErrorVerbosity;
 
 pub trait StateProvider {
-    type JwtValidationError: std::error::Error + Send + Sync + 'static;
+    type JwtValidationError: std::error::Error;
 
     /// Returns the error verbosity.
     fn error_verbosity(&self) -> ErrorVerbosity;
@@ -18,7 +20,10 @@ pub trait StateProvider {
     fn basic_auth_authenticate(&self, username: &str, password: Option<&str>) -> bool;
 
     /// Validates the JWT returning the claims.
-    async fn jwt_validate<C, E>(&self, jwt: &str) -> Result<C, Self::JwtValidationError>
+    fn jwt_validate<C>(
+        &self,
+        jwt: &str,
+    ) -> impl Future<Output = Result<C, Self::JwtValidationError>> + Send
     where
         C: DeserializeOwned;
 }
