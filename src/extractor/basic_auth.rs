@@ -23,7 +23,7 @@ impl ApiBasicAuth {
             .ok_or_else(|| {
                 tracing::warn!("Rejection. Authorization header not found");
 
-                BasicAuthError::new(verbosity, BasicAuthErrorType::Missing)
+                BasicAuthError::new(verbosity, BasicAuthErrorType::AuthMissing)
             })?
             .to_str()
             .map_err(|err| {
@@ -31,7 +31,7 @@ impl ApiBasicAuth {
 
                 BasicAuthError::new(
                     verbosity,
-                    BasicAuthErrorType::InvalidChars {
+                    BasicAuthErrorType::AuthInvalidChars {
                         reason: err.to_string(),
                     },
                 )
@@ -48,9 +48,9 @@ impl ApiBasicAuth {
         let encoded_basic = match split {
             Some(("Basic", encoded_basic)) => encoded_basic,
             _ => {
-                tracing::warn!("Rejection. Authorization header is not 'Basic'");
+                tracing::warn!("Rejection. Authorization header is invalid Basic");
 
-                return Err(BasicAuthError::new(verbosity, BasicAuthErrorType::NotBasic).into());
+                return Err(BasicAuthError::new(verbosity, BasicAuthErrorType::InvalidBasic).into());
             }
         };
 
@@ -74,7 +74,7 @@ impl ApiBasicAuth {
         let decoded = String::from_utf8(decoded).map_err(|err| {
             tracing::warn!(%err, "Rejection. Decoded authorization header contains invalid characters");
 
-            BasicAuthError::new(verbosity, BasicAuthErrorType::InvalidChars { reason: err.to_string() })
+            BasicAuthError::new(verbosity, BasicAuthErrorType::AuthInvalidChars { reason: err.to_string() })
         })?;
 
         Ok(decoded)

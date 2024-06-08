@@ -26,14 +26,7 @@ pub enum ErrorVerbosity {
 }
 
 impl ErrorVerbosity {
-    pub fn should_generate_message(&self) -> bool {
-        match self {
-            ErrorVerbosity::Message | ErrorVerbosity::Type | ErrorVerbosity::Full => true,
-            _ => false,
-        }
-    }
-
-    pub fn should_generate_error_reason(&self) -> bool {
+    fn should_generate_error_reason(&self) -> bool {
         match self {
             ErrorVerbosity::Full => true,
             _ => false,
@@ -127,6 +120,10 @@ pub enum ApiError {
     ///
     /// This error is returned when the basic auth is not as expected.
     BasicAuth(BasicAuthError),
+    /// Bearer extract error
+    /// 
+    /// This error is returned when the bearer token is not as expected.
+    Bearer(BearerError),
 }
 
 impl ApiError {
@@ -140,6 +137,7 @@ impl ApiError {
             ApiError::NotFound(err) => err.verbosity,
             ApiError::ApiKey(err) => err.verbosity,
             ApiError::BasicAuth(err) => err.verbosity,
+            ApiError::Bearer(err) => err.verbosity,
         }
     }
 
@@ -153,6 +151,7 @@ impl ApiError {
             ApiError::NotFound(_) => "The requested resource was not found",
             ApiError::ApiKey(_) => "API key error",
             ApiError::BasicAuth(_) => "Basic auth error",
+            ApiError::Bearer(_) => "Bearer auth error"
         }
     }
 
@@ -166,6 +165,7 @@ impl ApiError {
             ApiError::NotFound(err) => err.status_code(),
             ApiError::ApiKey(err) => err.status_code(),
             ApiError::BasicAuth(err) => err.status_code(),
+            ApiError::Bearer(err) => err.status_code()
         }
     }
 
@@ -175,6 +175,9 @@ impl ApiError {
         match self {
             ApiError::BasicAuth(_) => {
                 headers.insert("WWW-Authenticate", HeaderValue::from_static("Basic"));
+            }
+            ApiError::Bearer(_) => {
+                headers.insert("WWW-Authenticate", HeaderValue::from_static("Bearer"));
             }
             _ => {}
         }
@@ -398,8 +401,8 @@ impl ApiKeyError {
 
 #[derive(Debug, Serialize)]
 pub enum BasicAuthErrorType {
-    Missing,
-    InvalidChars {
+    AuthMissing,
+    AuthInvalidChars {
         #[serde(skip)]
         reason: String,
     },
@@ -407,7 +410,7 @@ pub enum BasicAuthErrorType {
         #[serde(skip)]
         reason: String,
     },
-    NotBasic,
+    InvalidBasic,
     Invalid,
 }
 
@@ -434,15 +437,61 @@ impl BasicAuthError {
 
     fn reason(basic_auth_error_type: &BasicAuthErrorType) -> Cow<'static, str> {
         match basic_auth_error_type {
-            BasicAuthErrorType::Missing => Cow::Borrowed("Authorization header is missing"),
-            BasicAuthErrorType::InvalidChars { reason } => Cow::Owned(format!(
+            BasicAuthErrorType::AuthMissing => Cow::Borrowed("Authorization header is missing"),
+            BasicAuthErrorType::AuthInvalidChars { reason } => Cow::Owned(format!(
                 "Authorization header contains invalid characters: {reason}"
             )),
             BasicAuthErrorType::Decode { reason } => Cow::Owned(format!(
                 "Authorization header could not be decoded: {reason}"
             )),
-            BasicAuthErrorType::NotBasic => Cow::Borrowed("Authorization header must be Basic"),
+            BasicAuthErrorType::InvalidBasic => Cow::Borrowed("Authorization header is invalid Basic"),
             BasicAuthErrorType::Invalid => Cow::Borrowed("Basic auth is invalid"),
+        }
+    }
+
+    fn status_code(&self) -> StatusCode {
+        StatusCode::UNAUTHORIZED
+    }
+}
+
+#[derive(Debug, Serialize)]
+pub enum BearerErrorType {
+    AuthMissing,
+    AuthInvalidChars {
+        #[serde(skip)]
+        reason: String,
+    },
+    InvalidBearer,
+}
+
+#[derive(Debug, Serialize)]
+pub struct BearerError {
+    #[serde(skip)]
+    verbosity: ErrorVerbosity,
+    bearer_error_type: BearerErrorType,
+    bearer_error_reason: Option<Cow<'static, str>>,
+}
+
+impl BearerError {
+    pub fn new(verbosity: ErrorVerbosity, bearer_error_type: BearerErrorType) -> Self {
+        let bearer_error_reason = verbosity
+            .should_generate_error_reason()
+            .then(|| Self::reason(&bearer_error_type));
+
+        BearerError {
+            verbosity,
+            bearer_error_type,
+            bearer_error_reason,
+        }
+    }
+
+    fn reason(bearer_error_type: &BearerErrorType) ->  Cow<'static, str> {
+        match bearer_error_type {
+            BearerErrorType::AuthMissing => Cow::Borrowed("Authorization header is missing"),
+            BearerErrorType::AuthInvalidChars { reason } => Cow::Owned(format!(
+                "Authorization header contains invalid characters: {reason}"
+            )),
+            BearerErrorType::InvalidBearer => Cow::Borrowed("Authorization header is invalid Bearer"),
         }
     }
 

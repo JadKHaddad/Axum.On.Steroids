@@ -6,3 +6,4 @@ pub mod optional;
 pub mod path;
 pub mod query;
 pub mod valid_api_key;
+pub mod bearer_token;

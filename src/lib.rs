@@ -1,6 +1,6 @@
 pub mod cli_args;
-pub mod error;
-pub mod extractor;
+mod error;
+mod extractor;
 mod middleware;
 mod route;
 pub mod server;
