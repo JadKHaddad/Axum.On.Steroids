@@ -8,3 +8,4 @@ api_keys:
 basic_auth_users:
   - username: admin
     password: admin
+openid_configuration_url: https://keycloak.com/realms/master/.well-known/openid-configuration

@@ -17,16 +17,12 @@ use tower_http::{
 };
 
 use crate::{
-    error::ErrorVerbosity,
-    middleware::{
+    error::ErrorVerbosity, middleware::{
         method_not_allowed::method_not_allowed, not_found, trace_headers::trace_headers,
         trace_response_body::trace_response_body, validate_api_key_and_put_as_extension,
-    },
-    route::{
+    }, openid_configuration::OpenIdConfiguration, route::{
         api_key_protected, extract_api_key, extract_authenticated_basic_auth, extract_basic_auth, extract_bearer_token, extract_valid_api_key, extract_valid_api_key_optional, post_json
-    },
-    state::ApiState,
-    types::{used_api_key::UsedApiKey, used_basic_auth::UsedBasicAuth},
+    }, state::ApiState, types::{used_api_key::UsedApiKey, used_basic_auth::UsedBasicAuth}
 };
 
 #[derive(Debug, Deserialize)]
@@ -36,6 +32,7 @@ pub struct ServerConfig {
     api_key_header_name: String,
     api_keys: Vec<UsedApiKey>,
     basic_auth_users: Vec<UsedBasicAuth>,
+    openid_configuration_url: String,
 }
 
 impl ServerConfig {
@@ -60,12 +57,27 @@ impl Server {
         Self { config }
     }
 
+    async fn obtain_openid_configuration(&self) -> anyhow::Result<OpenIdConfiguration> {
+        let openid_configuration = reqwest::get(&self.config.openid_configuration_url)
+            .await
+            .context("Failed to get OpenID configuration")?
+            .json::<OpenIdConfiguration>()
+            .await.context("Failed to parse OpenID configuration")?;
+
+        Ok(openid_configuration)
+    }
+
     pub async fn run(self) -> anyhow::Result<()> {
+        tracing::trace!("Obtaining OpenID configuration");
+        let openid_configuration = self.obtain_openid_configuration().await?;
+        tracing::debug!(?openid_configuration, "Obtained OpenID configuration");
+
         let state = ApiState::new(
             self.config.error_verbosity,
             self.config.api_key_header_name,
             self.config.api_keys,
             self.config.basic_auth_users,
+            openid_configuration,
         );
 
         let post_json_app = Router::new().route(
