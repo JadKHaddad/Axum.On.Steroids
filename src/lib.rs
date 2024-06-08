@@ -9,3 +9,6 @@ mod state;
 mod traits;
 mod types;
 mod utils;
+
+#[cfg(test)]
+mod test;
