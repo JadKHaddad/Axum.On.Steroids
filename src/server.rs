@@ -57,27 +57,30 @@ impl Server {
         Self { config }
     }
 
-    async fn obtain_openid_configuration(&self) -> anyhow::Result<OpenIdConfiguration> {
-        let openid_configuration = reqwest::get(&self.config.openid_configuration_url)
+    async fn obtain_openid_config(&self, http_client: &reqwest::Client,) -> anyhow::Result<OpenIdConfiguration> {
+        let openid_config = http_client.get(&self.config.openid_configuration_url).send()
             .await
             .context("Failed to get OpenID configuration")?
             .json::<OpenIdConfiguration>()
             .await.context("Failed to parse OpenID configuration")?;
 
-        Ok(openid_configuration)
+        Ok(openid_config)
     }
 
     pub async fn run(self) -> anyhow::Result<()> {
+        let http_client = reqwest::Client::new();
+
         tracing::trace!("Obtaining OpenID configuration");
-        let openid_configuration = self.obtain_openid_configuration().await?;
-        tracing::debug!(?openid_configuration, "Obtained OpenID configuration");
+        let openid_config = self.obtain_openid_config(&http_client).await?;
+        tracing::debug!(?openid_config, "Obtained OpenID configuration");
 
         let state = ApiState::new(
+            http_client,
             self.config.error_verbosity,
             self.config.api_key_header_name,
             self.config.api_keys,
             self.config.basic_auth_users,
-            openid_configuration,
+            openid_config,
         );
 
         let post_json_app = Router::new().route(
