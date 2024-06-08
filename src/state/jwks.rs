@@ -4,31 +4,31 @@ use jsonwebtoken::jwk::JwkSet;
 use tokio::sync::RwLock;
 
 #[derive(Debug, thiserror::Error)]
-pub enum JWKSError {
+pub enum JwkError {
     #[error("Failed to fetch JWKS from the JWKS URI: {0}")]
     Fetch(#[source] reqwest::Error),
     #[error("Failed to parse JWKS from the JWKS URI: {0}")]
     Parse(#[source] reqwest::Error),
 }
 
-pub struct JWKSRefresher {
+pub struct JwkRefresher {
     time_to_live_in_seconds: u64,
     jwks_uri: String,
     http_client: reqwest::Client,
-    holder: RwLock<JWKSHolder>,
+    holder: RwLock<JwkHolder>,
 }
 
-impl JWKSRefresher {
+impl JwkRefresher {
     #[tracing::instrument(skip_all)]
-    async fn obtain_jwks(jwks_uri: &str, http_client: &reqwest::Client,) -> Result<JwkSet, JWKSError> {
+    async fn obtain_jwks(jwks_uri: &str, http_client: &reqwest::Client,) -> Result<JwkSet, JwkError> {
         let jwks = http_client
             .get(jwks_uri)
             .send()
             .await
-            .map_err(JWKSError::Fetch)?
+            .map_err(JwkError::Fetch)?
             .json::<JwkSet>()
             .await
-            .map_err(JWKSError::Parse)?;
+            .map_err(JwkError::Parse)?;
 
         Ok(jwks)
     }
@@ -37,7 +37,7 @@ impl JWKSRefresher {
         time_to_live_in_seconds: u64,
         jwks_uri: String,
         http_client: reqwest::Client,
-    ) -> Result<Self, JWKSError> {
+    ) -> Result<Self, JwkError> {
         let jwks = Self::obtain_jwks(&jwks_uri, &http_client).await?;
         let last_updated = Instant::now();
 
@@ -45,12 +45,12 @@ impl JWKSRefresher {
             time_to_live_in_seconds,
             jwks_uri,
             http_client,
-            holder: RwLock::new(JWKSHolder { last_updated, jwks }),
+            holder: RwLock::new(JwkHolder { last_updated, jwks }),
         })
     }
 
     #[tracing::instrument(skip_all)]
-    async fn refresh_jwks(&self) -> Result<(), JWKSError> {
+    async fn refresh_jwks(&self) -> Result<(), JwkError> {
         let jwks = Self::obtain_jwks(&self.jwks_uri, &self.http_client).await?;
 
         let mut inner = self.holder.write().await;
@@ -62,25 +62,23 @@ impl JWKSRefresher {
     }
 
     #[tracing::instrument(skip_all)]
-    async fn get(&self) -> &RwLock<JWKSHolder> {
+    async fn get(&self) -> Result<&RwLock<JwkHolder>, JwkError> {
         let last_updated = self.holder.read().await.last_updated;
 
         if last_updated.elapsed().as_secs() > self.time_to_live_in_seconds {
-            if let Err(err) = self.refresh_jwks().await {
-                tracing::error!(%err, "Failed to refresh JWKS");
-            }
+            self.refresh_jwks().await?;
         }
 
-        &self.holder
+       Ok(&self.holder)
     }
 }
 
-struct JWKSHolder {
+struct JwkHolder {
     last_updated: Instant,
     jwks: JwkSet,
 }
 
-impl JWKSHolder {
+impl JwkHolder {
     pub fn jwks(&self) -> &JwkSet {
         &self.jwks
     }
