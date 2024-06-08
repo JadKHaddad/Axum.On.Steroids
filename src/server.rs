@@ -39,6 +39,8 @@ pub struct ServerConfig {
     api_keys: Vec<UsedApiKey>,
     basic_auth_users: Vec<UsedBasicAuth>,
     openid_configuration_url: String,
+    jwks_time_to_live_in_seconds: u64,
+    audience: Vec<String>,
 }
 
 impl ServerConfig {
@@ -93,7 +95,11 @@ impl Server {
             self.config.api_keys,
             self.config.basic_auth_users,
             openid_config,
-        );
+            self.config.jwks_time_to_live_in_seconds,
+            self.config.audience,
+        )
+        .await
+        .context("Failed to create state")?;
 
         let post_json_app = Router::new().route(
             "/echo_a_person",

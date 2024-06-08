@@ -24,7 +24,7 @@ impl JwkRefresher {
         jwks_uri: &str,
         http_client: &reqwest::Client,
     ) -> Result<JwkSet, JwkError> {
-        tracing::info!("Obtaining Jwks");
+        tracing::debug!("Obtaining Jwks");
 
         let jwks = http_client
             .get(jwks_uri)
@@ -56,7 +56,7 @@ impl JwkRefresher {
 
     #[tracing::instrument(skip_all)]
     async fn refresh_jwks(&self) -> Result<(), JwkError> {
-        tracing::info!("Refreshing Jwks");
+        tracing::debug!("Refreshing Jwks");
 
         let jwks = Self::obtain_jwks(&self.jwks_uri, &self.http_client).await?;
 
@@ -69,7 +69,7 @@ impl JwkRefresher {
     }
 
     #[tracing::instrument(skip_all)]
-    async fn get(&self) -> Result<&RwLock<JwkHolder>, JwkError> {
+    pub async fn get(&self) -> Result<&RwLock<JwkHolder>, JwkError> {
         let last_updated = self.holder.read().await.last_updated;
 
         if last_updated.elapsed().as_secs() > self.time_to_live_in_seconds {
@@ -80,7 +80,7 @@ impl JwkRefresher {
     }
 }
 
-struct JwkHolder {
+pub struct JwkHolder {
     last_updated: Instant,
     jwks: JwkSet,
 }

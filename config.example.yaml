@@ -9,3 +9,6 @@ basic_auth_users:
   - username: admin
     password: admin
 openid_configuration_url: https://keycloak.com/realms/master/.well-known/openid-configuration
+jwks_time_to_live_in_seconds: 300
+audience: 
+  - account
