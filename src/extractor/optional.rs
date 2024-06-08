@@ -4,7 +4,7 @@ use std::convert::Infallible;
 use crate::traits::StateProvider;
 
 /// Extracts an optional extractor from the request.
-/// 
+///
 /// This Extractors never fails, it will always return `None` if the inner extractor fails.
 pub struct Optional<X>(pub Option<X>);
 

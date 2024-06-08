@@ -121,7 +121,7 @@ pub enum ApiError {
     /// This error is returned when the basic auth is not as expected.
     BasicAuth(BasicAuthError),
     /// Bearer extract error
-    /// 
+    ///
     /// This error is returned when the bearer token is not as expected.
     Bearer(BearerError),
 }
@@ -151,7 +151,7 @@ impl ApiError {
             ApiError::NotFound(_) => "The requested resource was not found",
             ApiError::ApiKey(_) => "API key error",
             ApiError::BasicAuth(_) => "Basic auth error",
-            ApiError::Bearer(_) => "Bearer auth error"
+            ApiError::Bearer(_) => "Bearer auth error",
         }
     }
 
@@ -165,7 +165,7 @@ impl ApiError {
             ApiError::NotFound(err) => err.status_code(),
             ApiError::ApiKey(err) => err.status_code(),
             ApiError::BasicAuth(err) => err.status_code(),
-            ApiError::Bearer(err) => err.status_code()
+            ApiError::Bearer(err) => err.status_code(),
         }
     }
 
@@ -444,7 +444,9 @@ impl BasicAuthError {
             BasicAuthErrorType::Decode { reason } => Cow::Owned(format!(
                 "Authorization header could not be decoded: {reason}"
             )),
-            BasicAuthErrorType::InvalidBasic => Cow::Borrowed("Authorization header is invalid Basic"),
+            BasicAuthErrorType::InvalidBasic => {
+                Cow::Borrowed("Authorization header is invalid Basic")
+            }
             BasicAuthErrorType::Invalid => Cow::Borrowed("Basic auth is invalid"),
         }
     }
@@ -485,13 +487,15 @@ impl BearerError {
         }
     }
 
-    fn reason(bearer_error_type: &BearerErrorType) ->  Cow<'static, str> {
+    fn reason(bearer_error_type: &BearerErrorType) -> Cow<'static, str> {
         match bearer_error_type {
             BearerErrorType::AuthMissing => Cow::Borrowed("Authorization header is missing"),
             BearerErrorType::AuthInvalidChars { reason } => Cow::Owned(format!(
                 "Authorization header contains invalid characters: {reason}"
             )),
-            BearerErrorType::InvalidBearer => Cow::Borrowed("Authorization header is invalid Bearer"),
+            BearerErrorType::InvalidBearer => {
+                Cow::Borrowed("Authorization header is invalid Bearer")
+            }
         }
     }
 

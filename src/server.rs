@@ -17,12 +17,18 @@ use tower_http::{
 };
 
 use crate::{
-    error::ErrorVerbosity, middleware::{
+    error::ErrorVerbosity,
+    middleware::{
         method_not_allowed::method_not_allowed, not_found, trace_headers::trace_headers,
         trace_response_body::trace_response_body, validate_api_key_and_put_as_extension,
-    }, openid_configuration::OpenIdConfiguration, route::{
-        api_key_protected, extract_api_key, extract_authenticated_basic_auth, extract_basic_auth, extract_bearer_token, extract_valid_api_key, extract_valid_api_key_optional, post_json
-    }, state::ApiState, types::{used_api_key::UsedApiKey, used_basic_auth::UsedBasicAuth}
+    },
+    openid_configuration::OpenIdConfiguration,
+    route::{
+        api_key_protected, extract_api_key, extract_authenticated_basic_auth, extract_basic_auth,
+        extract_bearer_token, extract_valid_api_key, extract_valid_api_key_optional, post_json,
+    },
+    state::ApiState,
+    types::{used_api_key::UsedApiKey, used_basic_auth::UsedBasicAuth},
 };
 
 #[derive(Debug, Deserialize)]
@@ -57,12 +63,18 @@ impl Server {
         Self { config }
     }
 
-    async fn obtain_openid_config(&self, http_client: &reqwest::Client,) -> anyhow::Result<OpenIdConfiguration> {
-        let openid_config = http_client.get(&self.config.openid_configuration_url).send()
+    async fn obtain_openid_config(
+        &self,
+        http_client: &reqwest::Client,
+    ) -> anyhow::Result<OpenIdConfiguration> {
+        let openid_config = http_client
+            .get(&self.config.openid_configuration_url)
+            .send()
             .await
             .context("Failed to get OpenID configuration")?
             .json::<OpenIdConfiguration>()
-            .await.context("Failed to parse OpenID configuration")?;
+            .await
+            .context("Failed to parse OpenID configuration")?;
 
         Ok(openid_config)
     }

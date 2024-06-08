@@ -55,7 +55,6 @@ impl ApiBearerToken {
 
         Ok(bearer_token)
     }
-
 }
 
 #[async_trait]
@@ -72,7 +71,9 @@ where
         let authorization = Self::extract_authorization(parts, verbosity)?;
         let bearer_token = Self::extract_bearer_token(authorization, verbosity)?;
 
-        let used_bearer_token = UsedBearerToken { value: bearer_token.to_string() };
+        let used_bearer_token = UsedBearerToken {
+            value: bearer_token.to_string(),
+        };
 
         tracing::trace!(?used_bearer_token, "Extracted");
 

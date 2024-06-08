@@ -23,9 +23,7 @@ impl IntoResponse for ExtractBearerTokenResponse {
 /// The bearer token is not validated by [`ApiBearerToken`].
 /// This function will reject if [`ApiBearerToken`] rejects.
 pub async fn extract_bearer_token_using_extractor(
-    ApiBearerToken(UsedBearerToken{value: used_token}): ApiBearerToken,
+    ApiBearerToken(UsedBearerToken { value: used_token }): ApiBearerToken,
 ) -> ExtractBearerTokenResponse {
-    ExtractBearerTokenResponse {
-        used_token
-    }
+    ExtractBearerTokenResponse { used_token }
 }

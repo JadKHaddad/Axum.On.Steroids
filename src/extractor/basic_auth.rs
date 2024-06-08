@@ -50,7 +50,9 @@ impl ApiBasicAuth {
             _ => {
                 tracing::warn!("Rejection. Authorization header is invalid Basic");
 
-                return Err(BasicAuthError::new(verbosity, BasicAuthErrorType::InvalidBasic).into());
+                return Err(
+                    BasicAuthError::new(verbosity, BasicAuthErrorType::InvalidBasic).into(),
+                );
             }
         };
 
