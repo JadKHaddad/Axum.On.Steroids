@@ -55,7 +55,7 @@ impl StateProvider for ApiState {
 
     fn api_key_validate(&self, key: &str) -> bool {
         for valid_key in self.api_keys.iter() {
-            if valid_key.api_key == key {
+            if valid_key.value == key {
                 return true;
             }
         }

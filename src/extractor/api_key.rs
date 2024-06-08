@@ -47,6 +47,6 @@ where
 
         let api_key = api_key.to_string();
 
-        Ok(ApiKey(UsedApiKey { api_key }))
+        Ok(ApiKey(UsedApiKey { value: api_key }))
     }
 }

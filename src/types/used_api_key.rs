@@ -8,5 +8,5 @@ use serde::{Deserialize, Serialize};
 #[serde(transparent)]
 pub struct UsedApiKey {
     // TODO: can use a heapless string here.
-    pub api_key: String,
+    pub value: String,
 }

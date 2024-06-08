@@ -25,6 +25,6 @@ pub async fn extract_valid_api_key_using_optional_extractor(
     Optional(opt_api_key): Optional<ValidApiKey>,
 ) -> OptionalExtractValidApiKeyResponse {
     OptionalExtractValidApiKeyResponse {
-        used_valid_api_key: opt_api_key.map(|key| key.0.api_key),
+        used_valid_api_key: opt_api_key.map(|key| key.0.value),
     }
 }

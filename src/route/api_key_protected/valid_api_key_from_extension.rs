@@ -23,6 +23,6 @@ pub async fn valid_api_key_from_extension(
     Extension(valid_api_key): Extension<ValidApiKey>,
 ) -> ApiKeyFromExtensionResponse {
     ApiKeyFromExtensionResponse {
-        used_api_key: valid_api_key.0.api_key,
+        used_api_key: valid_api_key.0.value,
     }
 }

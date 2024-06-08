@@ -24,6 +24,6 @@ impl IntoResponse for ExtractApiKeyResponse {
 /// This function will reject if [`ApiKey`] rejects.
 pub async fn extract_api_key_using_extractor(ApiKey(key): ApiKey) -> ExtractApiKeyResponse {
     ExtractApiKeyResponse {
-        used_api_key: key.api_key,
+        used_api_key: key.value,
     }
 }
