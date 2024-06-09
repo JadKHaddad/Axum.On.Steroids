@@ -4,8 +4,13 @@ use serde::de::DeserializeOwned;
 
 use crate::error::ErrorVerbosity;
 
+pub trait JwtValidationErrorProvider: std::error::Error {
+    /// Indicates if the JWT is expired.
+    fn is_expired(&self) -> bool;
+}
+
 pub trait StateProvider {
-    type JwtValidationError: std::error::Error;
+    type JwtValidationError: JwtValidationErrorProvider;
 
     /// Returns the error verbosity.
     fn error_verbosity(&self) -> ErrorVerbosity;

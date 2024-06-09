@@ -83,45 +83,45 @@ impl IntoResponse for ApiErrorResponse {
 
 #[derive(Debug, From, Serialize, ToSchema)]
 #[serde(tag = "error_type", content = "error")]
-/// API error
+/// API error.
 pub enum ApiError {
-    /// Internal server error
+    /// Internal server error.
     ///
     /// This error is returned when an internal server error occurs.
     InternalServerError(InternalServerError),
-    /// Query error
+    /// Query error.
     ///
     /// This error is returned when the query parameters are not as expected.
     Query(QueryError),
-    /// Body error
+    /// Body error.
     ///
     /// This error is returned when the body is not as expected.
     Body(BodyError),
-    /// Path error
+    /// Path error.
     ///
     /// This error is returned when the path is not as expected.
     Path(PathError),
-    /// Method not allowed
+    /// Method not allowed.
     ///
     /// This error is returned when the method is not allowed.
     MethodNotAllowed(MethodNotAllowedError),
-    /// Not found error
+    /// Not found error.
     ///
     /// This error is returned when the requested resource is not found.
     NotFound(NotFoundError),
-    /// API key error
+    /// API key error.
     ///
     /// This error is returned when the API key is not as expected.
     ApiKey(ApiKeyError),
-    /// Basic auth error
+    /// Basic auth error.
     ///
     /// This error is returned when the basic auth is not as expected.
     BasicAuth(BasicAuthError),
-    /// Bearer extract error
+    /// Bearer extract error.
     ///
     /// This error is returned when the bearer token is not as expected.
     Bearer(BearerError),
-    /// JWT error
+    /// JWT error.
     ///
     /// This error is returned when the JWT is not as expected.
     Jwt(JwtError),
@@ -514,7 +514,11 @@ pub enum JwtErrorType {
         #[serde(skip)]
         reason: String,
     },
-    /// User does not have a valid role
+    /// ExpiredSignature is a special case of Invalid.
+    ///
+    /// Intentionally extracted from the Invalid variant to provide a more specific error message.
+    ExpiredSignature,
+    /// User does not have a valid role.
     Forbidden,
 }
 
@@ -542,13 +546,16 @@ impl JwtError {
     fn reason(jwt_error_type: &JwtErrorType) -> Cow<'static, str> {
         match jwt_error_type {
             JwtErrorType::Invalid { reason } => Cow::Owned(format!("JWT is invalid: {reason}")),
+            JwtErrorType::ExpiredSignature => Cow::Borrowed("JWT has expired"),
             JwtErrorType::Forbidden => Cow::Borrowed("User does not have a valid role"),
         }
     }
 
     fn status_code(&self) -> StatusCode {
         match self.jwt_error_type {
-            JwtErrorType::Invalid { .. } => StatusCode::UNAUTHORIZED,
+            JwtErrorType::Invalid { .. } | JwtErrorType::ExpiredSignature => {
+                StatusCode::UNAUTHORIZED
+            }
             JwtErrorType::Forbidden => StatusCode::FORBIDDEN,
         }
     }

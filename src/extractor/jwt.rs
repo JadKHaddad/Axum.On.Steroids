@@ -6,7 +6,7 @@ use serde::de::DeserializeOwned;
 use crate::{
     error::{ApiError, JwtError, JwtErrorType},
     extractor::bearer_token::ApiBearerToken,
-    traits::StateProvider,
+    traits::{JwtValidationErrorProvider, StateProvider},
     types::used_bearer_token::UsedBearerToken,
 };
 
@@ -31,6 +31,10 @@ where
 
         let claims = state.jwt_validate::<C>(&value).await.map_err(|err| {
             tracing::warn!(%err, "Rejection");
+
+            if err.is_expired() {
+                return JwtError::new(verbosity, JwtErrorType::ExpiredSignature);
+            }
 
             JwtError::new(
                 verbosity,

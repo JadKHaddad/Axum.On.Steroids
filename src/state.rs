@@ -12,7 +12,7 @@ use serde::de::DeserializeOwned;
 use crate::{
     error::ErrorVerbosity,
     openid_configuration::OpenIdConfiguration,
-    traits::StateProvider,
+    traits::{JwtValidationErrorProvider, StateProvider},
     types::{used_api_key::UsedApiKey, used_basic_auth::UsedBasicAuth},
 };
 
@@ -170,4 +170,16 @@ pub enum JwtValidationError {
     },
     #[error("Error validating token: {0}")]
     TokenInvalid(#[from] jsonwebtoken::errors::Error),
+}
+
+impl JwtValidationErrorProvider for JwtValidationError {
+    fn is_expired(&self) -> bool {
+        match self {
+            JwtValidationError::TokenInvalid(err) => matches!(
+                err.kind(),
+                jsonwebtoken::errors::ErrorKind::ExpiredSignature
+            ),
+            _ => false,
+        }
+    }
 }
