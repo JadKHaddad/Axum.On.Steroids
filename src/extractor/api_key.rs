@@ -2,7 +2,7 @@ use axum::{async_trait, extract::FromRequestParts, http::request::Parts};
 
 use crate::{
     error::{ApiError, ApiKeyError, ApiKeyErrorType},
-    traits::StateProvider,
+    state::StateProvider,
     types::used_api_key::UsedApiKey,
 };
 

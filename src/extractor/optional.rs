@@ -1,7 +1,7 @@
 use axum::{async_trait, extract::FromRequestParts, http::request::Parts};
 use std::convert::Infallible;
 
-use crate::traits::StateProvider;
+use crate::state::StateProvider;
 
 /// Extracts an optional extractor from the request.
 ///

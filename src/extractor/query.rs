@@ -9,7 +9,7 @@ use std::fmt::Debug;
 
 use crate::{
     error::{ApiError, InternalServerError, QueryError},
-    traits::StateProvider,
+    state::StateProvider,
 };
 
 /// A Wrapper around [`axum::extract::Query`] that rejects with an [`ApiError`].

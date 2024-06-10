@@ -6,7 +6,7 @@ use serde::de::DeserializeOwned;
 use crate::{
     error::{ApiError, JwtError, JwtErrorType},
     extractor::bearer_token::ApiBearerToken,
-    traits::{JwtValidationErrorProvider, StateProvider},
+    state::StateProvider,
     types::used_bearer_token::UsedBearerToken,
 };
 
@@ -36,7 +36,7 @@ where
                 return JwtError::new(verbosity, JwtErrorType::ExpiredSignature);
             }
 
-            JwtError::new(verbosity, err.into_jwt_error_type())
+            JwtError::new(verbosity, JwtErrorType::Invalid { err })
         })?;
 
         tracing::trace!(?claims, "Extracted");

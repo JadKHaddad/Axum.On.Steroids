@@ -8,7 +8,7 @@ use std::fmt::Debug;
 
 use crate::{
     error::{ApiError, JsonBodyError},
-    traits::StateProvider,
+    state::StateProvider,
 };
 
 /// A Wrapper around [`axum::extract::Json`] that rejects with an [`ApiError`].

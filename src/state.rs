@@ -1,4 +1,4 @@
-use std::{ops::Deref, str::FromStr, sync::Arc};
+use std::{future::Future, ops::Deref, str::FromStr, sync::Arc};
 
 use anyhow::Context;
 use jsonwebtoken::{
@@ -10,13 +10,37 @@ use jwks::JwkRefresher;
 use serde::de::DeserializeOwned;
 
 use crate::{
-    error::{ErrorVerbosity, JwtErrorType},
+    error::ErrorVerbosity,
     openid_configuration::OpenIdConfiguration,
-    traits::{JwtValidationErrorProvider, StateProvider},
     types::{used_api_key::UsedApiKey, used_basic_auth::UsedBasicAuth},
 };
 
 mod jwks;
+
+/// Describes our state to axum.
+///
+/// This trait is crate private and therefore has no unnecessary generics.
+pub trait StateProvider {
+    /// Returns the error verbosity.
+    fn error_verbosity(&self) -> ErrorVerbosity;
+
+    /// Returns the API key header name.
+    fn api_key_header_name(&self) -> &str;
+
+    /// Validates the API key.
+    fn api_key_validate(&self, key: &str) -> bool;
+
+    /// Authenticates the basic auth.
+    fn basic_auth_authenticate(&self, username: &str, password: Option<&str>) -> bool;
+
+    /// Validates the JWT returning the claims.
+    fn jwt_validate<C>(
+        &self,
+        jwt: &str,
+    ) -> impl Future<Output = Result<C, JwtValidationError>> + Send
+    where
+        C: DeserializeOwned;
+}
 
 #[derive(Clone)]
 pub struct ApiState {
@@ -76,8 +100,6 @@ pub struct ApiStateInner {
 }
 
 impl StateProvider for ApiState {
-    type JwtValidationError = JwtValidationError;
-
     fn error_verbosity(&self) -> ErrorVerbosity {
         self.error_verbosity
     }
@@ -106,7 +128,7 @@ impl StateProvider for ApiState {
         false
     }
 
-    async fn jwt_validate<C>(&self, jwt: &str) -> Result<C, Self::JwtValidationError>
+    async fn jwt_validate<C>(&self, jwt: &str) -> Result<C, JwtValidationError>
     where
         C: DeserializeOwned,
     {
@@ -172,8 +194,8 @@ pub enum JwtValidationError {
     TokenInvalid(#[from] jsonwebtoken::errors::Error),
 }
 
-impl JwtValidationErrorProvider for JwtValidationError {
-    fn is_expired(&self) -> bool {
+impl JwtValidationError {
+    pub fn is_expired(&self) -> bool {
         match self {
             JwtValidationError::TokenInvalid(err) => matches!(
                 err.kind(),
@@ -181,9 +203,5 @@ impl JwtValidationErrorProvider for JwtValidationError {
             ),
             _ => false,
         }
-    }
-
-    fn into_jwt_error_type(self) -> JwtErrorType {
-        JwtErrorType::Invalid { err: self }
     }
 }

@@ -7,7 +7,6 @@ mod openid_configuration;
 mod route;
 pub mod server;
 mod state;
-mod traits;
 mod types;
 mod utils;
 

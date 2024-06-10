@@ -2,7 +2,7 @@ use axum::{async_trait, extract::FromRequestParts, http::request::Parts};
 
 use crate::{
     error::{ApiError, BasicAuthError, BasicAuthErrorType},
-    traits::StateProvider,
+    state::StateProvider,
     types::used_basic_auth::UsedBasicAuth,
 };
 

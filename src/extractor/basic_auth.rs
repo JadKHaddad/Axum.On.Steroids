@@ -7,7 +7,7 @@ use base64::Engine;
 
 use crate::{
     error::{ApiError, BasicAuthError, BasicAuthErrorType, ErrorVerbosity},
-    traits::StateProvider,
+    state::StateProvider,
     types::used_basic_auth::UsedBasicAuth,
 };
 

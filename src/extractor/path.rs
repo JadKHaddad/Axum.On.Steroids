@@ -9,7 +9,7 @@ use std::fmt::Debug;
 
 use crate::{
     error::{ApiError, PathError},
-    traits::StateProvider,
+    state::StateProvider,
 };
 
 /// A Wrapper around [`axum::extract::Path`] that rejects with an [`ApiError`].

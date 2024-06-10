@@ -6,7 +6,7 @@ use axum::{
 
 use crate::{
     error::{ApiError, BearerError, BearerErrorType, ErrorVerbosity},
-    traits::StateProvider,
+    state::StateProvider,
     types::used_bearer_token::UsedBearerToken,
 };
 
