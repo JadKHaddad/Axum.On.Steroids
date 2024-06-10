@@ -73,12 +73,8 @@ impl IntoResponse for ApiErrorResponse {
 
                 (status_code, headers, Json(ApiErrorMessage::from(self))).into_response()
             }
-            ErrorVerbosity::Type => {
-                let status_code = self.error.status_code();
-
-                (status_code, headers, Json(self)).into_response()
-            }
-            ErrorVerbosity::Full => {
+            // error content is (cleared/not cleared) on error creation
+            ErrorVerbosity::Type | ErrorVerbosity::Full => {
                 let status_code = self.error.status_code();
 
                 (status_code, headers, Json(self)).into_response()
