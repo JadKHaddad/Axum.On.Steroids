@@ -9,7 +9,7 @@ use derive_more::From;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
-// TODO: use ErrorTypes for QueryError, BodyError and PathError
+// TODO: use ErrorTypes for QueryError and PathError
 
 #[derive(Debug, Clone, Copy, Deserialize)]
 pub enum ErrorVerbosity {
@@ -93,10 +93,10 @@ pub enum ApiError {
     ///
     /// This error is returned when the query parameters are not as expected.
     Query(QueryError),
-    /// Body error.
+    /// Json Body error.
     ///
     /// This error is returned when the body is not as expected.
-    Body(BodyError),
+    JsonBody(JsonBodyError),
     /// Path error.
     ///
     /// This error is returned when the path is not as expected.
@@ -132,7 +132,7 @@ impl ApiError {
         match self {
             ApiError::InternalServerError(err) => err.verbosity,
             ApiError::Query(err) => err.verbosity,
-            ApiError::Body(err) => err.verbosity,
+            ApiError::JsonBody(err) => err.verbosity,
             ApiError::Path(err) => err.verbosity,
             ApiError::MethodNotAllowed(err) => err.verbosity,
             ApiError::NotFound(err) => err.verbosity,
@@ -147,7 +147,7 @@ impl ApiError {
         match self {
             ApiError::InternalServerError(_) => "An internal server error has occurred",
             ApiError::Query(_) => "Failed to parse query parameters",
-            ApiError::Body(_) => "Failed to parse request body",
+            ApiError::JsonBody(_) => "Failed to parse request body",
             ApiError::Path(_) => "Failed to parse path parameters",
             ApiError::MethodNotAllowed(_) => "Method not allowed",
             ApiError::NotFound(_) => "The requested resource was not found",
@@ -162,7 +162,7 @@ impl ApiError {
         match self {
             ApiError::InternalServerError(err) => err.status_code(),
             ApiError::Query(err) => err.status_code(),
-            ApiError::Body(err) => err.status_code(),
+            ApiError::JsonBody(err) => err.status_code(),
             ApiError::Path(err) => err.status_code(),
             ApiError::MethodNotAllowed(err) => err.status_code(),
             ApiError::NotFound(err) => err.status_code(),
@@ -266,34 +266,52 @@ impl QueryError {
 }
 
 #[derive(Debug, Serialize)]
-pub struct BodyError {
-    #[serde(skip)]
-    verbosity: ErrorVerbosity,
-    body_error_reason: Option<String>,
-    body_expected_schema: Option<String>,
+pub enum JsonBodyErrorType {
+    DataError,
+    SyntaxError,
+    MissingJsonContentType,
 }
 
-impl BodyError {
+// FIXME: json_body_error_reason and json_body_expected_schema are being generated regardless of the verbosity level in the exctractors.
+#[derive(Debug, Serialize)]
+pub struct JsonBodyError {
+    #[serde(skip)]
+    verbosity: ErrorVerbosity,
+    json_body_error_type: JsonBodyErrorType,
+    json_body_error_reason: Option<String>,
+    json_body_expected_schema: Option<String>,
+}
+
+impl JsonBodyError {
     pub fn new(
         verbosity: ErrorVerbosity,
-        body_error_reason: String,
-        body_expected_schema: String,
+        json_body_error_type: JsonBodyErrorType,
+        json_body_error_reason: String,
+        json_body_expected_schema: String,
     ) -> Self {
         let (body_error_reason, body_expected_schema) =
             match verbosity.should_generate_error_reason() {
-                true => (Some(body_error_reason), Some(body_expected_schema)),
+                true => (
+                    Some(json_body_error_reason),
+                    Some(json_body_expected_schema),
+                ),
                 false => (None, None),
             };
 
-        BodyError {
+        JsonBodyError {
             verbosity,
-            body_error_reason,
-            body_expected_schema,
+            json_body_error_type,
+            json_body_error_reason: body_error_reason,
+            json_body_expected_schema: body_expected_schema,
         }
     }
 
     fn status_code(&self) -> StatusCode {
-        StatusCode::BAD_REQUEST
+        match self.json_body_error_type {
+            JsonBodyErrorType::DataError => StatusCode::UNPROCESSABLE_ENTITY,
+            JsonBodyErrorType::SyntaxError => StatusCode::BAD_REQUEST,
+            JsonBodyErrorType::MissingJsonContentType => StatusCode::UNSUPPORTED_MEDIA_TYPE,
+        }
     }
 }
 

@@ -1,13 +1,13 @@
 use axum::{
     async_trait,
-    extract::{FromRequest, Json as AxumJson, Request},
+    extract::{rejection::JsonRejection, FromRequest, Json as AxumJson, Request},
 };
 use schemars::{schema_for, JsonSchema};
 use serde::de::DeserializeOwned;
 use std::fmt::Debug;
 
 use crate::{
-    error::{ApiError, BodyError, InternalServerError},
+    error::{ApiError, InternalServerError, JsonBodyError, JsonBodyErrorType},
     traits::StateProvider,
 };
 
@@ -35,16 +35,37 @@ where
                 Ok(ApiJson(json.0))
             }
             Err(json_rejection) => {
+                let json_body_error_type = match json_rejection {
+                    JsonRejection::JsonDataError(_) => JsonBodyErrorType::DataError,
+                    JsonRejection::JsonSyntaxError(_) => JsonBodyErrorType::SyntaxError,
+                    JsonRejection::MissingJsonContentType(_) => {
+                        JsonBodyErrorType::MissingJsonContentType
+                    }
+                    _ => {
+                        return Err(InternalServerError::from_generic_error(
+                            state.error_verbosity(),
+                            json_rejection,
+                        )
+                        .into())
+                    }
+                };
+
                 tracing::warn!(rejection=?json_rejection, "Rejection");
 
                 let verbosity = state.error_verbosity();
 
-                let body_error_reason = json_rejection.body_text();
+                let json_body_error_reason = json_rejection.body_text();
 
-                let body_expected_schema = serde_yaml::to_string(&schema_for!(T))
+                let json_body_expected_schema = serde_yaml::to_string(&schema_for!(T))
                     .map_err(|err| InternalServerError::from_generic_error(verbosity, err))?;
 
-                Err(BodyError::new(verbosity, body_error_reason, body_expected_schema).into())
+                Err(JsonBodyError::new(
+                    verbosity,
+                    json_body_error_type,
+                    json_body_error_reason,
+                    json_body_expected_schema,
+                )
+                .into())
             }
         }
     }
