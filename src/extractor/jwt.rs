@@ -36,12 +36,7 @@ where
                 return JwtError::new(verbosity, JwtErrorType::ExpiredSignature);
             }
 
-            JwtError::new(
-                verbosity,
-                JwtErrorType::Invalid {
-                    reason: err.to_string(),
-                },
-            )
+            JwtError::new(verbosity, err.into_jwt_error_type())
         })?;
 
         tracing::trace!(?claims, "Extracted");

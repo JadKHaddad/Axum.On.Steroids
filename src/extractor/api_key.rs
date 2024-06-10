@@ -35,12 +35,7 @@ where
             .map_err(|err| {
                 tracing::warn!(%err, "Rejection. API key contains invalid characters");
 
-                ApiKeyError::new(
-                    verbosity,
-                    ApiKeyErrorType::InvalidChars {
-                        reason: err.to_string(),
-                    },
-                )
+                ApiKeyError::new(verbosity, ApiKeyErrorType::InvalidChars { err })
             })?;
 
         tracing::trace!(%api_key, "Extracted");

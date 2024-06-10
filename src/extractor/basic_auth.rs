@@ -29,12 +29,7 @@ impl ApiBasicAuth {
             .map_err(|err| {
                 tracing::warn!(%err, "Rejection. Authorization header contains invalid characters");
 
-                BasicAuthError::new(
-                    verbosity,
-                    BasicAuthErrorType::AuthInvalidChars {
-                        reason: err.to_string(),
-                    },
-                )
+                BasicAuthError::new(verbosity, BasicAuthErrorType::AuthInvalidChars { err })
             })?;
 
         Ok(authorization)
@@ -65,18 +60,13 @@ impl ApiBasicAuth {
             .map_err(|err| {
                 tracing::warn!(%err, "Rejection. Authorization header could not be decoded");
 
-                BasicAuthError::new(
-                    verbosity,
-                    BasicAuthErrorType::Decode {
-                        reason: err.to_string(),
-                    },
-                )
+                BasicAuthError::new(verbosity, BasicAuthErrorType::Decode { err })
             })?;
 
         let decoded = String::from_utf8(decoded).map_err(|err| {
             tracing::warn!(%err, "Rejection. Decoded authorization header contains invalid characters");
 
-            BasicAuthError::new(verbosity, BasicAuthErrorType::AuthInvalidChars { reason: err.to_string() })
+            BasicAuthError::new(verbosity, BasicAuthErrorType::AuthInvalidUTF8 { err })
         })?;
 
         Ok(decoded)

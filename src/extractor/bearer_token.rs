@@ -28,12 +28,7 @@ impl ApiBearerToken {
             .map_err(|err| {
                 tracing::warn!(%err, "Rejection. Authorization header contains invalid characters");
 
-                BearerError::new(
-                    verbosity,
-                    BearerErrorType::AuthInvalidChars {
-                        reason: err.to_string(),
-                    },
-                )
+                BearerError::new(verbosity, BearerErrorType::AuthInvalidChars { err })
             })?;
 
         Ok(authorization)

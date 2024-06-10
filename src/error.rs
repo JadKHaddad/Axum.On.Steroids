@@ -1,4 +1,4 @@
-use std::borrow::Cow;
+use std::{borrow::Cow, string::FromUtf8Error};
 
 use axum::{
     extract::rejection::JsonRejection,
@@ -6,10 +6,14 @@ use axum::{
     response::{IntoResponse, Response},
     Json,
 };
+use base64::DecodeError;
 use derive_more::From;
+use reqwest::header::ToStrError;
 use schemars::{schema_for, JsonSchema};
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
+
+use crate::state::JwtValidationError;
 
 // TODO: use ErrorTypes for QueryError and PathError
 
@@ -393,7 +397,7 @@ pub enum ApiKeyErrorType {
     Missing,
     InvalidChars {
         #[serde(skip)]
-        reason: String,
+        err: ToStrError,
     },
     Invalid,
 }
@@ -422,8 +426,8 @@ impl ApiKeyError {
     fn reason(api_key_error_type: &ApiKeyErrorType) -> Cow<'static, str> {
         match api_key_error_type {
             ApiKeyErrorType::Missing => Cow::Borrowed("API key is missing"),
-            ApiKeyErrorType::InvalidChars { reason } => {
-                Cow::Owned(format!("API key contains invalid characters: {reason}"))
+            ApiKeyErrorType::InvalidChars { err } => {
+                Cow::Owned(format!("API key contains invalid characters: {err}"))
             }
             ApiKeyErrorType::Invalid => Cow::Borrowed("API key invalid"),
         }
@@ -443,11 +447,15 @@ pub enum BasicAuthErrorType {
     AuthMissing,
     AuthInvalidChars {
         #[serde(skip)]
-        reason: String,
+        err: ToStrError,
     },
     Decode {
         #[serde(skip)]
-        reason: String,
+        err: DecodeError,
+    },
+    AuthInvalidUTF8 {
+        #[serde(skip)]
+        err: FromUtf8Error,
     },
     InvalidBasic,
     Invalid,
@@ -477,15 +485,18 @@ impl BasicAuthError {
     fn reason(basic_auth_error_type: &BasicAuthErrorType) -> Cow<'static, str> {
         match basic_auth_error_type {
             BasicAuthErrorType::AuthMissing => Cow::Borrowed("Authorization header is missing"),
-            BasicAuthErrorType::AuthInvalidChars { reason } => Cow::Owned(format!(
-                "Authorization header contains invalid characters: {reason}"
+            BasicAuthErrorType::AuthInvalidChars { err } => Cow::Owned(format!(
+                "Authorization header contains invalid characters: {err}"
             )),
-            BasicAuthErrorType::Decode { reason } => Cow::Owned(format!(
-                "Authorization header could not be decoded: {reason}"
-            )),
+            BasicAuthErrorType::Decode { err } => {
+                Cow::Owned(format!("Authorization header could not be decoded: {err}"))
+            }
             BasicAuthErrorType::InvalidBasic => {
                 Cow::Borrowed("Authorization header is invalid Basic")
             }
+            BasicAuthErrorType::AuthInvalidUTF8 { err } => Cow::Owned(format!(
+                "Decoded authorization header contains invalid characters: {err}"
+            )),
             BasicAuthErrorType::Invalid => Cow::Borrowed("Basic auth is invalid"),
         }
     }
@@ -500,7 +511,7 @@ pub enum BearerErrorType {
     AuthMissing,
     AuthInvalidChars {
         #[serde(skip)]
-        reason: String,
+        err: ToStrError,
     },
     InvalidBearer,
 }
@@ -529,8 +540,8 @@ impl BearerError {
     fn reason(bearer_error_type: &BearerErrorType) -> Cow<'static, str> {
         match bearer_error_type {
             BearerErrorType::AuthMissing => Cow::Borrowed("Authorization header is missing"),
-            BearerErrorType::AuthInvalidChars { reason } => Cow::Owned(format!(
-                "Authorization header contains invalid characters: {reason}"
+            BearerErrorType::AuthInvalidChars { err } => Cow::Owned(format!(
+                "Authorization header contains invalid characters: {err}"
             )),
             BearerErrorType::InvalidBearer => {
                 Cow::Borrowed("Authorization header is invalid Bearer")
@@ -547,7 +558,7 @@ impl BearerError {
 pub enum JwtErrorType {
     Invalid {
         #[serde(skip)]
-        reason: String,
+        err: JwtValidationError,
     },
     /// ExpiredSignature is a special case of Invalid.
     ///
@@ -580,7 +591,7 @@ impl JwtError {
 
     fn reason(jwt_error_type: &JwtErrorType) -> Cow<'static, str> {
         match jwt_error_type {
-            JwtErrorType::Invalid { reason } => Cow::Owned(format!("JWT is invalid: {reason}")),
+            JwtErrorType::Invalid { err } => Cow::Owned(format!("JWT is invalid: {err}")),
             JwtErrorType::ExpiredSignature => Cow::Borrowed("JWT has expired"),
             JwtErrorType::Forbidden => Cow::Borrowed("User does not have a valid role"),
         }

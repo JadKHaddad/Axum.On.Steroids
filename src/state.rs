@@ -10,7 +10,7 @@ use jwks::JwkRefresher;
 use serde::de::DeserializeOwned;
 
 use crate::{
-    error::ErrorVerbosity,
+    error::{ErrorVerbosity, JwtErrorType},
     openid_configuration::OpenIdConfiguration,
     traits::{JwtValidationErrorProvider, StateProvider},
     types::{used_api_key::UsedApiKey, used_basic_auth::UsedBasicAuth},
@@ -181,5 +181,9 @@ impl JwtValidationErrorProvider for JwtValidationError {
             ),
             _ => false,
         }
+    }
+
+    fn into_jwt_error_type(self) -> JwtErrorType {
+        JwtErrorType::Invalid { err: self }
     }
 }
