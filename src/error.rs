@@ -1,11 +1,13 @@
 use std::borrow::Cow;
 
 use axum::{
+    extract::rejection::JsonRejection,
     http::{HeaderMap, HeaderValue, StatusCode},
     response::{IntoResponse, Response},
     Json,
 };
 use derive_more::From;
+use schemars::{schema_for, JsonSchema};
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
@@ -272,7 +274,6 @@ pub enum JsonBodyErrorType {
     MissingJsonContentType,
 }
 
-// FIXME: json_body_error_reason and json_body_expected_schema are being generated regardless of the verbosity level in the exctractors.
 #[derive(Debug, Serialize)]
 pub struct JsonBodyError {
     #[serde(skip)]
@@ -283,27 +284,43 @@ pub struct JsonBodyError {
 }
 
 impl JsonBodyError {
-    pub fn new(
+    pub fn from_json_rejection<T: JsonSchema>(
         verbosity: ErrorVerbosity,
-        json_body_error_type: JsonBodyErrorType,
-        json_body_error_reason: String,
-        json_body_expected_schema: String,
-    ) -> Self {
-        let (body_error_reason, body_expected_schema) =
+        json_rejection: JsonRejection,
+    ) -> ApiError {
+        let json_body_error_type = match json_rejection {
+            JsonRejection::JsonDataError(_) => JsonBodyErrorType::DataError,
+            JsonRejection::JsonSyntaxError(_) => JsonBodyErrorType::SyntaxError,
+            JsonRejection::MissingJsonContentType(_) => JsonBodyErrorType::MissingJsonContentType,
+            _ => return InternalServerError::from_generic_error(verbosity, json_rejection).into(),
+        };
+
+        let (json_body_error_reason, json_body_expected_schema) =
             match verbosity.should_generate_error_reason() {
-                true => (
-                    Some(json_body_error_reason),
-                    Some(json_body_expected_schema),
-                ),
+                true => {
+                    let json_body_error_reason = json_rejection.body_text();
+                    let json_body_expected_schema = match serde_yaml::to_string(&schema_for!(T)) {
+                        Ok(schema) => schema,
+                        Err(err) => {
+                            return InternalServerError::from_generic_error(verbosity, err).into()
+                        }
+                    };
+
+                    (
+                        Some(json_body_error_reason),
+                        Some(json_body_expected_schema),
+                    )
+                }
                 false => (None, None),
             };
 
         JsonBodyError {
             verbosity,
             json_body_error_type,
-            json_body_error_reason: body_error_reason,
-            json_body_expected_schema: body_expected_schema,
+            json_body_error_reason,
+            json_body_expected_schema,
         }
+        .into()
     }
 
     fn status_code(&self) -> StatusCode {
