@@ -1,7 +1,7 @@
 use std::{borrow::Cow, string::FromUtf8Error};
 
 use axum::{
-    extract::rejection::JsonRejection,
+    extract::rejection::{JsonRejection, QueryRejection},
     http::{HeaderMap, HeaderValue, StatusCode},
     response::{IntoResponse, Response},
     Json,
@@ -15,7 +15,7 @@ use utoipa::ToSchema;
 
 use crate::state::JwtValidationError;
 
-// TODO: use ErrorTypes for QueryError and PathError
+// TODO: use ErrorTypes for PathError
 
 #[derive(Debug, Clone, Copy, Deserialize)]
 pub enum ErrorVerbosity {
@@ -236,30 +236,52 @@ impl InternalServerError {
 }
 
 #[derive(Debug, Serialize)]
+pub enum QueryErrorType {
+    DeserializeError,
+}
+
+#[derive(Debug, Serialize)]
 pub struct QueryError {
     #[serde(skip)]
     verbosity: ErrorVerbosity,
+    query_error_type: QueryErrorType,
     query_error_reason: Option<String>,
     query_expected_schema: Option<String>,
 }
 
 impl QueryError {
-    pub fn new(
+    pub fn from_query_rejection<T: JsonSchema>(
         verbosity: ErrorVerbosity,
-        query_error_reason: String,
-        query_expected_schema: String,
-    ) -> Self {
+        query_rejection: QueryRejection,
+    ) -> ApiError {
+        let query_error_type = match query_rejection {
+            QueryRejection::FailedToDeserializeQueryString(_) => QueryErrorType::DeserializeError,
+            _ => return InternalServerError::from_generic_error(verbosity, query_rejection).into(),
+        };
+
         let (query_error_reason, query_expected_schema) =
             match verbosity.should_generate_error_reason() {
-                true => (Some(query_error_reason), Some(query_expected_schema)),
+                true => {
+                    let query_error_reason = query_rejection.body_text();
+                    let query_expected_schema = match serde_yaml::to_string(&schema_for!(T)) {
+                        Ok(schema) => schema,
+                        Err(err) => {
+                            return InternalServerError::from_generic_error(verbosity, err).into()
+                        }
+                    };
+
+                    (Some(query_error_reason), Some(query_expected_schema))
+                }
                 false => (None, None),
             };
 
         QueryError {
             verbosity,
+            query_error_type,
             query_error_reason,
             query_expected_schema,
         }
+        .into()
     }
 
     fn status_code(&self) -> StatusCode {

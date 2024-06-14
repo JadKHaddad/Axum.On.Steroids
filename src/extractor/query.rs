@@ -3,12 +3,12 @@ use axum::{
     extract::{FromRequestParts, Query as AxumQuery},
     http::request::Parts,
 };
-use schemars::{schema_for, JsonSchema};
+use schemars::JsonSchema;
 use serde::de::DeserializeOwned;
 use std::fmt::Debug;
 
 use crate::{
-    error::{ApiError, InternalServerError, QueryError},
+    error::{ApiError, QueryError},
     state::StateProvider,
 };
 
@@ -40,12 +40,10 @@ where
 
                 let verbosity = state.error_verbosity();
 
-                let query_error_reason = query_rejection.body_text();
-
-                let query_expected_schema = serde_yaml::to_string(&schema_for!(T))
-                    .map_err(|err| InternalServerError::from_generic_error(verbosity, err))?;
-
-                Err(QueryError::new(verbosity, query_error_reason, query_expected_schema).into())
+                Err(QueryError::from_query_rejection::<T>(
+                    verbosity,
+                    query_rejection,
+                ))
             }
         }
     }
