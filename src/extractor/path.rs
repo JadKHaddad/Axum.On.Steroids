@@ -40,9 +40,7 @@ where
 
                 let verbosity = state.error_verbosity();
 
-                let path_error_reason = path_rejection.body_text();
-
-                Err(PathError::new(verbosity, path_error_reason).into())
+                Err(PathError::from_path_rejection(verbosity, path_rejection))
             }
         }
     }

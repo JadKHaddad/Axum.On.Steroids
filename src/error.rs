@@ -1,7 +1,10 @@
 use std::{borrow::Cow, string::FromUtf8Error};
 
 use axum::{
-    extract::rejection::{JsonRejection, QueryRejection},
+    extract::{
+        path::ErrorKind as PathErrorKind,
+        rejection::{JsonRejection, PathRejection, QueryRejection},
+    },
     http::{HeaderMap, HeaderValue, StatusCode},
     response::{IntoResponse, Response},
     Json,
@@ -14,8 +17,6 @@ use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
 use crate::state::JwtValidationError;
-
-// TODO: use ErrorTypes for PathError
 
 #[derive(Debug, Clone, Copy, Deserialize)]
 pub enum ErrorVerbosity {
@@ -355,22 +356,48 @@ impl JsonBodyError {
 }
 
 #[derive(Debug, Serialize)]
+pub enum PathErrorType {
+    DeserializeError,
+}
+
+#[derive(Debug, Serialize)]
 pub struct PathError {
     #[serde(skip)]
     verbosity: ErrorVerbosity,
+    path_error_type: PathErrorType,
     path_error_reason: Option<String>,
 }
 
 impl PathError {
-    pub fn new(verbosity: ErrorVerbosity, path_error_reason: String) -> Self {
+    pub fn from_path_rejection(
+        verbosity: ErrorVerbosity,
+        path_rejection: PathRejection,
+    ) -> ApiError {
+        let path_error_type = match path_rejection {
+            PathRejection::FailedToDeserializePathParams(ref err) => match err.kind() {
+                PathErrorKind::Message(_)
+                | PathErrorKind::InvalidUtf8InPathParam { .. }
+                | PathErrorKind::ParseError { .. }
+                | PathErrorKind::ParseErrorAtIndex { .. }
+                | PathErrorKind::ParseErrorAtKey { .. } => PathErrorType::DeserializeError,
+                _ => {
+                    return InternalServerError::from_generic_error(verbosity, path_rejection)
+                        .into()
+                }
+            },
+            _ => return InternalServerError::from_generic_error(verbosity, path_rejection).into(),
+        };
+
         let path_error_reason = verbosity
             .should_generate_error_reason()
-            .then_some(path_error_reason);
+            .then_some(path_rejection.body_text());
 
         PathError {
             verbosity,
+            path_error_type,
             path_error_reason,
         }
+        .into()
     }
 
     fn status_code(&self) -> StatusCode {
