@@ -238,6 +238,7 @@ impl InternalServerError {
 
 #[derive(Debug, Serialize)]
 pub enum QueryErrorType {
+    /// Query parameters deserialization failed.
     DeserializeError,
 }
 
@@ -292,8 +293,11 @@ impl QueryError {
 
 #[derive(Debug, Serialize)]
 pub enum JsonBodyErrorType {
+    /// JSON data could not be deserialized to the target type.
     DataError,
+    /// JSON syntax error. Invalid JSON.
     SyntaxError,
+    /// Missing JSON content type.
     MissingJsonContentType,
 }
 
@@ -357,6 +361,7 @@ impl JsonBodyError {
 
 #[derive(Debug, Serialize)]
 pub enum PathErrorType {
+    /// Path parameters deserialization failed.
     DeserializeError,
 }
 
@@ -439,11 +444,14 @@ impl NotFoundError {
 
 #[derive(Debug, Serialize)]
 pub enum ApiKeyErrorType {
+    /// API key is missing.
     Missing,
+    /// API key contains invalid characters.
     InvalidChars {
         #[serde(skip)]
         err: ToStrError,
     },
+    /// API key is invalid.
     Invalid,
 }
 
@@ -489,20 +497,26 @@ impl ApiKeyError {
 
 #[derive(Debug, Serialize)]
 pub enum BasicAuthErrorType {
+    /// Authorization header is missing.
     AuthMissing,
+    /// Authorization header contains invalid characters.
     AuthInvalidChars {
         #[serde(skip)]
         err: ToStrError,
     },
+    /// Authorization header could not be decoded.
     Decode {
         #[serde(skip)]
         err: DecodeError,
     },
+    /// Decoded authorization header contains invalid characters.
     AuthInvalidUTF8 {
         #[serde(skip)]
         err: FromUtf8Error,
     },
+    /// Authorization header is invalid Basic.
     InvalidBasic,
+    /// Authentication failed.
     Invalid,
 }
 
@@ -553,11 +567,14 @@ impl BasicAuthError {
 
 #[derive(Debug, Serialize)]
 pub enum BearerErrorType {
+    /// Authorization header is missing.
     AuthMissing,
+    /// Authorization header contains invalid characters.
     AuthInvalidChars {
         #[serde(skip)]
         err: ToStrError,
     },
+    /// Authorization header is invalid Bearer.
     InvalidBearer,
 }
 
@@ -601,6 +618,7 @@ impl BearerError {
 
 #[derive(Debug, Serialize)]
 pub enum JwtErrorType {
+    /// JWT validation failed.
     Invalid {
         #[serde(skip)]
         err: JwtValidationError,
