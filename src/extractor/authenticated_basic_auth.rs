@@ -8,7 +8,7 @@ use crate::{
 
 use super::basic_auth::ApiBasicAuth;
 
-/// Extracts and authenticated the basic auth from the request headers.
+/// Extracts and authenticates the basic auth from the request headers.
 #[derive(Debug, Clone)]
 pub struct ApiAuthenticatedBasicAuth(pub UsedBasicAuth);
 
