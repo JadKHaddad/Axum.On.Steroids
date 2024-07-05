@@ -33,7 +33,7 @@ pub enum ErrorVerbosity {
 }
 
 impl ErrorVerbosity {
-    fn should_generate_error_reason(&self) -> bool {
+    fn should_generate_error_context(&self) -> bool {
         matches!(self, ErrorVerbosity::Full)
     }
 }
@@ -64,21 +64,16 @@ impl IntoResponse for ApiErrorResponse {
 
         match self.error.verbosity() {
             ErrorVerbosity::None => StatusCode::NO_CONTENT.into_response(),
-            ErrorVerbosity::StatusCode => {
-                let status_code = self.error.status_code();
-
-                (status_code, headers).into_response()
-            }
-            ErrorVerbosity::Message => {
-                let status_code = self.error.status_code();
-
-                (status_code, headers, Json(ApiErrorMessage::from(self))).into_response()
-            }
+            ErrorVerbosity::StatusCode => (self.error.status_code(), headers).into_response(),
+            ErrorVerbosity::Message => (
+                self.error.status_code(),
+                headers,
+                Json(ApiErrorMessage::from(self)),
+            )
+                .into_response(),
             // error content is (cleared/not cleared) on error creation
             ErrorVerbosity::Type | ErrorVerbosity::Full => {
-                let status_code = self.error.status_code();
-
-                (status_code, headers, Json(self)).into_response()
+                (self.error.status_code(), headers, Json(self)).into_response()
             }
         }
     }
@@ -223,7 +218,7 @@ impl InternalServerError {
         let err = format!("{err:#}");
         tracing::error!(%err, "Internal server error");
 
-        let internal_server_error = verbosity.should_generate_error_reason().then_some(err);
+        let internal_server_error = verbosity.should_generate_error_context().then_some(err);
 
         InternalServerError {
             verbosity,
@@ -262,7 +257,7 @@ impl QueryError {
         };
 
         let (query_error_reason, query_expected_schema) =
-            match verbosity.should_generate_error_reason() {
+            match verbosity.should_generate_error_context() {
                 true => {
                     let query_error_reason = query_rejection.body_text();
                     let query_expected_schema = match serde_yaml::to_string(&schema_for!(T)) {
@@ -323,7 +318,7 @@ impl JsonBodyError {
         };
 
         let (json_body_error_reason, json_body_expected_schema) =
-            match verbosity.should_generate_error_reason() {
+            match verbosity.should_generate_error_context() {
                 true => {
                     let json_body_error_reason = json_rejection.body_text();
                     let json_body_expected_schema = match serde_yaml::to_string(&schema_for!(T)) {
@@ -394,7 +389,7 @@ impl PathError {
         };
 
         let path_error_reason = verbosity
-            .should_generate_error_reason()
+            .should_generate_error_context()
             .then_some(path_rejection.body_text());
 
         PathError {
@@ -466,7 +461,7 @@ pub struct ApiKeyError {
 impl ApiKeyError {
     pub fn new(verbosity: ErrorVerbosity, api_key_error_type: ApiKeyErrorType) -> Self {
         let api_key_error_reason = verbosity
-            .should_generate_error_reason()
+            .should_generate_error_context()
             .then(|| Self::reason(&api_key_error_type));
 
         ApiKeyError {
@@ -531,7 +526,7 @@ pub struct BasicAuthError {
 impl BasicAuthError {
     pub fn new(verbosity: ErrorVerbosity, basic_auth_error_type: BasicAuthErrorType) -> Self {
         let basic_auth_error_reason = verbosity
-            .should_generate_error_reason()
+            .should_generate_error_context()
             .then(|| Self::reason(&basic_auth_error_type));
 
         BasicAuthError {
@@ -589,7 +584,7 @@ pub struct BearerError {
 impl BearerError {
     pub fn new(verbosity: ErrorVerbosity, bearer_error_type: BearerErrorType) -> Self {
         let bearer_error_reason = verbosity
-            .should_generate_error_reason()
+            .should_generate_error_context()
             .then(|| Self::reason(&bearer_error_type));
 
         BearerError {
@@ -642,7 +637,7 @@ pub struct JwtError {
 impl JwtError {
     pub fn new(verbosity: ErrorVerbosity, jwt_error_type: JwtErrorType) -> Self {
         let jwt_error_reason = verbosity
-            .should_generate_error_reason()
+            .should_generate_error_context()
             .then(|| Self::reason(&jwt_error_type));
 
         JwtError {
@@ -666,6 +661,96 @@ impl JwtError {
                 StatusCode::UNAUTHORIZED
             }
             JwtErrorType::Forbidden => StatusCode::FORBIDDEN,
+        }
+    }
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+struct ResourceErrorResponse<ET, C> {
+    #[serde(flatten)]
+    error: ResourceError<ET, C>,
+    message: &'static str,
+}
+
+impl<ET, C> From<ResourceErrorResponse<ET, C>> for ApiErrorMessage {
+    fn from(response: ResourceErrorResponse<ET, C>) -> Self {
+        ApiErrorMessage {
+            message: response.message,
+        }
+    }
+}
+
+#[derive(Debug, Serialize, ToSchema)]
+pub struct ResourceError<ET, C> {
+    #[serde(skip)]
+    verbosity: ErrorVerbosity,
+    error_type: ET,
+    context: Option<C>,
+}
+
+pub trait ResourceErrorProvider<C> {
+    fn headers(&self) -> HeaderMap;
+
+    fn status_code(&self) -> StatusCode;
+
+    fn message(&self) -> &'static str;
+
+    fn context(&self) -> C;
+}
+
+impl<ET, C> ResourceError<ET, C>
+where
+    ET: ResourceErrorProvider<C>,
+{
+    pub fn new(verbosity: ErrorVerbosity, error_type: ET) -> Self {
+        let context = verbosity
+            .should_generate_error_context()
+            .then_some(error_type.context());
+
+        ResourceError {
+            verbosity,
+            error_type,
+            context,
+        }
+    }
+}
+
+impl<ET, C> From<ResourceError<ET, C>> for ResourceErrorResponse<ET, C>
+where
+    ET: ResourceErrorProvider<C>,
+{
+    fn from(error: ResourceError<ET, C>) -> Self {
+        let message = match error.verbosity {
+            ErrorVerbosity::None => "",
+            _ => error.error_type.message(),
+        };
+
+        ResourceErrorResponse { error, message }
+    }
+}
+
+impl<ET, C> IntoResponse for ResourceErrorResponse<ET, C>
+where
+    ET: ResourceErrorProvider<C> + Serialize,
+    C: Serialize,
+{
+    fn into_response(self) -> Response {
+        let headers = self.error.error_type.headers();
+
+        match self.error.verbosity {
+            ErrorVerbosity::None => StatusCode::NO_CONTENT.into_response(),
+            ErrorVerbosity::StatusCode => {
+                (self.error.error_type.status_code(), headers).into_response()
+            }
+            ErrorVerbosity::Message => (
+                self.error.error_type.status_code(),
+                headers,
+                Json(ApiErrorMessage::from(self)),
+            )
+                .into_response(),
+            ErrorVerbosity::Type | ErrorVerbosity::Full => {
+                (self.error.error_type.status_code(), headers, Json(self)).into_response()
+            }
         }
     }
 }
