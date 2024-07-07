@@ -24,8 +24,8 @@ use crate::{
     },
     openid_configuration::OpenIdConfiguration,
     route::{
-        api_key_protected, extract_api_key, extract_authenticated_basic_auth, extract_basic_auth,
-        extract_bearer_token, extract_jwt_claims, extract_valid_api_key,
+        api_key_protected, books, extract_api_key, extract_authenticated_basic_auth,
+        extract_basic_auth, extract_bearer_token, extract_jwt_claims, extract_valid_api_key,
         extract_valid_api_key_optional, post_json,
     },
     state::ApiState,
@@ -102,6 +102,13 @@ impl Server {
         .await
         .context("Failed to create state")?;
 
+        let books_app = Router::new()
+            .route("/get_book", get(books::get_book::get_book))
+            .route(
+                "/get_book_not_found",
+                get(books::get_book::get_book_not_found),
+            );
+
         let post_json_app = Router::new().route(
             "/echo_a_person",
             post(post_json::echo_a_person::echo_a_person),
@@ -126,6 +133,7 @@ impl Server {
             .fallback(not_found::not_found)
             .nest("/api_key_protected", api_key_protected_app)
             .nest("/post_json", post_json_app)
+            .nest("/books", books_app)
             .route("/", get(|| async { "Index" }))
             .route(
                 "/extract_valid_jwt_claims_using_extractor",

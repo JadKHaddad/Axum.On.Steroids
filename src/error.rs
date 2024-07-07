@@ -688,19 +688,21 @@ pub struct ResourceError<ET, C> {
     context: Option<C>,
 }
 
-pub trait ResourceErrorProvider<C> {
-    fn headers(&self) -> HeaderMap;
+pub trait ResourceErrorProvider {
+    type Context;
+
+    fn headers(&self) -> Option<HeaderMap>;
 
     fn status_code(&self) -> StatusCode;
 
     fn message(&self) -> &'static str;
 
-    fn context(&self) -> C;
+    fn context(&self) -> Self::Context;
 }
 
 impl<ET, C> ResourceError<ET, C>
 where
-    ET: ResourceErrorProvider<C>,
+    ET: ResourceErrorProvider<Context = C>,
 {
     pub fn new(verbosity: ErrorVerbosity, error_type: ET) -> Self {
         let context = verbosity
@@ -717,7 +719,7 @@ where
 
 impl<ET, C> From<ResourceError<ET, C>> for ResourceErrorResponse<ET, C>
 where
-    ET: ResourceErrorProvider<C>,
+    ET: ResourceErrorProvider<Context = C>,
 {
     fn from(error: ResourceError<ET, C>) -> Self {
         let message = match error.verbosity {
@@ -729,13 +731,23 @@ where
     }
 }
 
-impl<ET, C> IntoResponse for ResourceErrorResponse<ET, C>
+impl<ET, C> IntoResponse for ResourceError<ET, C>
 where
-    ET: ResourceErrorProvider<C> + Serialize,
+    ET: ResourceErrorProvider<Context = C> + Serialize,
     C: Serialize,
 {
     fn into_response(self) -> Response {
-        let headers = self.error.error_type.headers();
+        ResourceErrorResponse::from(self).into_response()
+    }
+}
+
+impl<ET, C> IntoResponse for ResourceErrorResponse<ET, C>
+where
+    ET: ResourceErrorProvider<Context = C> + Serialize,
+    C: Serialize,
+{
+    fn into_response(self) -> Response {
+        let headers = self.error.error_type.headers().unwrap_or_default();
 
         match self.error.verbosity {
             ErrorVerbosity::None => StatusCode::NO_CONTENT.into_response(),
