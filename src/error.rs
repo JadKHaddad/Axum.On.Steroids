@@ -18,6 +18,8 @@ use utoipa::ToSchema;
 
 use crate::state::JwtValidationError;
 
+// FIXME: Must not be public to all routes, to prevent defining arbitrary error verbosity.
+// Create PrivateErrorVerbosity in state.rs. and use it as input here.
 #[derive(Debug, Clone, Copy, Deserialize)]
 pub enum ErrorVerbosity {
     /// Server returns an empty response with [`StatusCode::NO_CONTENT`] for all errors.
