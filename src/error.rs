@@ -45,14 +45,17 @@ struct ApiErrorResponse {
     message: &'static str,
 }
 
+/// Holds only the message of the error.
+///
+/// Used if the error verbosity is set to [`ErrorVerbosity::Message`].
 #[derive(Debug, Serialize)]
-struct ApiErrorMessage {
+struct ErrorMessage {
     message: &'static str,
 }
 
-impl From<ApiErrorResponse> for ApiErrorMessage {
+impl From<ApiErrorResponse> for ErrorMessage {
     fn from(response: ApiErrorResponse) -> Self {
-        ApiErrorMessage {
+        ErrorMessage {
             message: response.message,
         }
     }
@@ -68,7 +71,7 @@ impl IntoResponse for ApiErrorResponse {
             ErrorVerbosity::Message => (
                 self.error.status_code(),
                 headers,
-                Json(ApiErrorMessage::from(self)),
+                Json(ErrorMessage::from(self)),
             )
                 .into_response(),
             // error content is (cleared/not cleared) on error creation
@@ -672,14 +675,18 @@ struct ResourceErrorResponse<ET, C> {
     message: &'static str,
 }
 
-impl<ET, C> From<ResourceErrorResponse<ET, C>> for ApiErrorMessage {
+impl<ET, C> From<ResourceErrorResponse<ET, C>> for ErrorMessage {
     fn from(response: ResourceErrorResponse<ET, C>) -> Self {
-        ApiErrorMessage {
+        ErrorMessage {
             message: response.message,
         }
     }
 }
 
+/// Defined for a specific route.
+///
+/// ET: Error type. Must implement [`ResourceErrorProvider`].
+/// C: Context wich contains additional information about the error
 #[derive(Debug, Serialize, ToSchema)]
 pub struct ResourceError<ET, C> {
     #[serde(skip)]
@@ -688,6 +695,7 @@ pub struct ResourceError<ET, C> {
     context: Option<C>,
 }
 
+/// Must be implemented for a specific error type to be used in [`ResourceError`].
 pub trait ResourceErrorProvider {
     type Context;
 
@@ -757,7 +765,7 @@ where
             ErrorVerbosity::Message => (
                 self.error.error_type.status_code(),
                 headers,
-                Json(ApiErrorMessage::from(self)),
+                Json(ErrorMessage::from(self)),
             )
                 .into_response(),
             ErrorVerbosity::Type | ErrorVerbosity::Full => {
