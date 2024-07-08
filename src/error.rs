@@ -63,7 +63,7 @@ impl From<ApiErrorResponse> for ErrorMessage {
 
 impl IntoResponse for ApiErrorResponse {
     fn into_response(self) -> Response {
-        let headers = self.error.headers();
+        let headers = self.error.headers().unwrap_or_default();
 
         match self.error.verbosity() {
             ErrorVerbosity::None => StatusCode::NO_CONTENT.into_response(),
@@ -174,20 +174,22 @@ impl ApiError {
         }
     }
 
-    fn headers(&self) -> HeaderMap {
-        let mut headers = HeaderMap::new();
-
+    fn headers(&self) -> Option<HeaderMap> {
         match self {
             ApiError::BasicAuth(_) => {
+                let mut headers = HeaderMap::new();
                 headers.insert("WWW-Authenticate", HeaderValue::from_static("Basic"));
+
+                Some(headers)
             }
             ApiError::Bearer(_) | ApiError::Jwt(_) => {
+                let mut headers = HeaderMap::new();
                 headers.insert("WWW-Authenticate", HeaderValue::from_static("Bearer"));
-            }
-            _ => {}
-        }
 
-        headers
+                Some(headers)
+            }
+            _ => None,
+        }
     }
 }
 
