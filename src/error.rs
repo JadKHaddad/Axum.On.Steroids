@@ -699,14 +699,22 @@ pub struct ResourceError<ET, C> {
 
 /// Must be implemented for a specific error type to be used in [`ResourceError`].
 pub trait ResourceErrorProvider {
+    /// Resource specific context.
+    ///
+    /// Provides additional information about the error.
+    /// Set to () if not needed.
     type Context;
 
+    /// Headers to be returned with the error.
     fn headers(&self) -> Option<HeaderMap>;
 
+    /// Status code to be returned with the error.
     fn status_code(&self) -> StatusCode;
 
+    /// Message to be returned with the error.
     fn message(&self) -> &'static str;
 
+    /// Context to be returned with the error.
     fn context(&self) -> Self::Context;
 }
 
