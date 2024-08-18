@@ -11,6 +11,8 @@ use crate::{
     state::StateProvider,
 };
 
+use super::extractor::ExtractorFromRequest;
+
 /// A Wrapper around [`axum::extract::Json`] that rejects with an [`ApiError`].
 ///
 /// Extracts the request body as JSON consuming the request.
@@ -45,5 +47,17 @@ where
                 ))
             }
         }
+    }
+}
+
+impl<T, S> ExtractorFromRequest<S> for ApiJson<T>
+where
+    T: DeserializeOwned + JsonSchema + Debug + Send,
+    S: Send + Sync + StateProvider,
+{
+    type Extracted = T;
+
+    fn extracted(&self) -> &Self::Extracted {
+        &self.0
     }
 }

@@ -8,3 +8,4 @@ pub mod extract_jwt_claims;
 pub mod extract_valid_api_key;
 pub mod extract_valid_api_key_optional;
 pub mod post_json;
+pub mod validated;

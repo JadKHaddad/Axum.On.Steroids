@@ -12,6 +12,8 @@ use crate::{
     state::StateProvider,
 };
 
+use super::extractor::ExtractorFromRequestParts;
+
 /// A Wrapper around [`axum::extract::Query`] that rejects with an [`ApiError`].
 ///
 /// Extracts query parameters from the request.
@@ -46,5 +48,17 @@ where
                 ))
             }
         }
+    }
+}
+
+impl<T, S> ExtractorFromRequestParts<S> for ApiQuery<T>
+where
+    T: DeserializeOwned + JsonSchema + Debug + Send,
+    S: Send + Sync + StateProvider,
+{
+    type Extracted = T;
+
+    fn extracted(&self) -> &Self::Extracted {
+        &self.0
     }
 }

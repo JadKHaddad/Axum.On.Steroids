@@ -26,7 +26,7 @@ use crate::{
     route::{
         api_key_protected, books, extract_api_key, extract_authenticated_basic_auth,
         extract_basic_auth, extract_bearer_token, extract_jwt_claims, extract_valid_api_key,
-        extract_valid_api_key_optional, post_json,
+        extract_valid_api_key_optional, post_json, validated,
     },
     state::ApiState,
     types::{used_api_key::UsedApiKey, used_basic_auth::UsedBasicAuth},
@@ -114,6 +114,11 @@ impl Server {
             post(post_json::echo_a_person::echo_a_person),
         );
 
+        let validate_app = Router::new().route(
+            "/validate_a_person",
+            post(validated::validate_a_person::validate_a_person),
+        );
+
         let api_key_protected_app = Router::new()
             .route("/", get(|| async { "API Key Protected" }))
             .route(
@@ -133,6 +138,7 @@ impl Server {
             .fallback(not_found::not_found)
             .nest("/api_key_protected", api_key_protected_app)
             .nest("/post_json", post_json_app)
+            .nest("/validated", validate_app)
             .nest("/books", books_app)
             .route("/", get(|| async { "Index" }))
             .route(

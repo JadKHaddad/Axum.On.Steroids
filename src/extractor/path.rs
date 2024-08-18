@@ -12,6 +12,8 @@ use crate::{
     state::StateProvider,
 };
 
+use super::extractor::ExtractorFromRequestParts;
+
 /// A Wrapper around [`axum::extract::Path`] that rejects with an [`ApiError`].
 ///
 /// Extracts path parameters from the request.
@@ -43,5 +45,17 @@ where
                 Err(PathError::from_path_rejection(verbosity, path_rejection))
             }
         }
+    }
+}
+
+impl<T, S> ExtractorFromRequestParts<S> for ApiPath<T>
+where
+    T: DeserializeOwned + JsonSchema + Debug + Send,
+    S: Send + Sync + StateProvider,
+{
+    type Extracted = T;
+
+    fn extracted(&self) -> &Self::Extracted {
+        &self.0
     }
 }
