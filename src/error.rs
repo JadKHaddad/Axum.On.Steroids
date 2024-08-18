@@ -15,11 +15,13 @@ use reqwest::header::ToStrError;
 use schemars::{schema_for, JsonSchema};
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
+use validator::ValidationErrors;
 
 use crate::state::JwtValidationError;
 
 // FIXME: Must not be public to all routes, to prevent defining arbitrary error verbosity.
 // Create PrivateErrorVerbosity in state.rs. and use it as input here.
+// TODO: add a RandomStatus code that returns only a random status code.
 #[derive(Debug, Clone, Copy, Deserialize)]
 pub enum ErrorVerbosity {
     /// Server returns an empty response with [`StatusCode::NO_CONTENT`] for all errors.
@@ -128,6 +130,10 @@ pub enum ApiError {
     ///
     /// This error is returned when the JWT is not as expected.
     Jwt(JwtError),
+    /// Validation error.
+    ///
+    /// This error is returned when the validation of the extracted data fails.
+    Validation(ValidationError),
 }
 
 impl ApiError {
@@ -143,6 +149,7 @@ impl ApiError {
             ApiError::BasicAuth(err) => err.verbosity,
             ApiError::Bearer(err) => err.verbosity,
             ApiError::Jwt(err) => err.verbosity,
+            ApiError::Validation(err) => err.verbosity,
         }
     }
 
@@ -158,6 +165,7 @@ impl ApiError {
             ApiError::BasicAuth(_) => "Basic auth error",
             ApiError::Bearer(_) => "Bearer auth error",
             ApiError::Jwt(_) => "JWT error",
+            ApiError::Validation(_) => "Validation error",
         }
     }
 
@@ -173,6 +181,7 @@ impl ApiError {
             ApiError::BasicAuth(err) => err.status_code(),
             ApiError::Bearer(err) => err.status_code(),
             ApiError::Jwt(err) => err.status_code(),
+            ApiError::Validation(err) => err.status_code(),
         }
     }
 
@@ -669,6 +678,33 @@ impl JwtError {
             }
             JwtErrorType::Forbidden => StatusCode::FORBIDDEN,
         }
+    }
+}
+
+#[derive(Debug, Serialize)]
+pub struct ValidationError {
+    #[serde(skip)]
+    verbosity: ErrorVerbosity,
+    validation_error_reason: Option<String>,
+}
+
+impl ValidationError {
+    pub fn from_validation_errors(
+        verbosity: ErrorVerbosity,
+        validation_errors: ValidationErrors,
+    ) -> Self {
+        let validation_error_reason = verbosity
+            .should_generate_error_context()
+            .then_some(validation_errors.to_string());
+
+        ValidationError {
+            verbosity,
+            validation_error_reason,
+        }
+    }
+
+    fn status_code(&self) -> StatusCode {
+        StatusCode::UNPROCESSABLE_ENTITY
     }
 }
 

@@ -6,7 +6,7 @@ use axum::{
 use validator::Validate;
 
 use crate::{
-    error::{ApiError, InternalServerError},
+    error::{ApiError, ValidationError},
     state::StateProvider,
 };
 
@@ -41,8 +41,7 @@ where
 
                 let verbosity = state.error_verbosity();
 
-                // TODO: add validation error to the error response
-                Err(InternalServerError::from_generic_error(verbosity, errors).into())
+                Err(ValidationError::from_validation_errors(verbosity, errors).into())
             }
         }
     }
@@ -77,8 +76,7 @@ where
 
                 let verbosity = state.error_verbosity();
 
-                // TODO: add validation error to the error response
-                Err(InternalServerError::from_generic_error(verbosity, errors).into())
+                Err(ValidationError::from_validation_errors(verbosity, errors).into())
             }
         }
     }

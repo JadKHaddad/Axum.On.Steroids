@@ -13,6 +13,7 @@ use crate::extractor::{json::ApiJson, validated::ValidatedFromRequest};
 pub struct Person {
     #[validate(length(min = 5, message = "Must be at least 5 characters long"))]
     pub name: String,
+    #[validate(range(min = 25, max = 150, message = "Must be between 25 and 150"))]
     pub age: u8,
     pub is_alive: bool,
     pub city: String,
