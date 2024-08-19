@@ -51,10 +51,9 @@ where
     }
 }
 
-impl<T, S> Extractor<S> for ApiQuery<T>
+impl<T> Extractor for ApiQuery<T>
 where
     T: DeserializeOwned + JsonSchema + Debug + Send,
-    S: Send + Sync + StateProvider,
 {
     type Extracted = T;
 

@@ -10,7 +10,7 @@ pub mod query;
 pub mod valid_api_key;
 pub mod validated;
 
-pub trait Extractor<S> {
+pub trait Extractor {
     type Extracted;
 
     fn extracted(&self) -> &Self::Extracted;

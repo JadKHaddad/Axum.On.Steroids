@@ -18,9 +18,9 @@ pub struct Validated<X>(pub X);
 impl<X> Validated<X> {
     fn extract<S>(inner: X, state: &S) -> Result<Self, ApiError>
     where
-        X: Extractor<S>,
+        X: Extractor,
         S: StateProvider,
-        <X as Extractor<S>>::Extracted: Validate,
+        <X as Extractor>::Extracted: Validate,
     {
         let extracted = inner.extracted();
 
@@ -45,8 +45,8 @@ impl<X> Validated<X> {
 impl<X, S> FromRequestParts<S> for Validated<X>
 where
     X: FromRequestParts<S, Rejection = ApiError>,
-    X: Extractor<S>,
-    <X as Extractor<S>>::Extracted: Validate,
+    X: Extractor,
+    <X as Extractor>::Extracted: Validate,
     S: Send + Sync + StateProvider,
 {
     type Rejection = ApiError;
@@ -63,8 +63,8 @@ where
 impl<X, S> FromRequest<S> for Validated<X>
 where
     X: FromRequest<S, Rejection = ApiError>,
-    X: Extractor<S>,
-    <X as Extractor<S>>::Extracted: Validate,
+    X: Extractor,
+    <X as Extractor>::Extracted: Validate,
     S: Send + Sync + StateProvider,
 {
     type Rejection = ApiError;
