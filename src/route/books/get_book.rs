@@ -34,8 +34,13 @@ impl IntoResponse for GetBookResponse {
 }
 
 #[derive(Debug, Serialize)]
+#[serde(tag = "error_type")]
 pub enum GetBookErrorType {
     NotFound {
+        #[serde(skip)]
+        id: i64,
+    },
+    IdTooBig {
         #[serde(skip)]
         id: i64,
     },
@@ -56,12 +61,14 @@ impl ResourceErrorProvider for GetBookErrorType {
     fn status_code(&self) -> StatusCode {
         match self {
             GetBookErrorType::NotFound { .. } => StatusCode::NOT_FOUND,
+            GetBookErrorType::IdTooBig { .. } => StatusCode::BAD_REQUEST,
         }
     }
 
     fn message(&self) -> &'static str {
         match self {
             GetBookErrorType::NotFound { .. } => "Book not found",
+            GetBookErrorType::IdTooBig { .. } => "Id too big",
         }
     }
 
@@ -69,6 +76,9 @@ impl ResourceErrorProvider for GetBookErrorType {
         match self {
             GetBookErrorType::NotFound { id } => GetBookErrorContext {
                 reason: format!("Book with id {} not found", id),
+            },
+            GetBookErrorType::IdTooBig { id } => GetBookErrorContext {
+                reason: format!("Id {} is too big", id),
             },
         }
     }
@@ -100,5 +110,17 @@ pub async fn get_book_not_found(
     Err(ResourceError::new(
         state.error_verbosity(),
         GetBookErrorType::NotFound { id },
+    ))
+}
+
+pub async fn get_book_id_too_big(
+    ApiQuery(query): ApiQuery<GetBookQuery>,
+    State(state): State<ApiState>,
+) -> Result<GetBookResponse, ResourceError<GetBookErrorType, GetBookErrorContext>> {
+    let id = query.id;
+
+    Err(ResourceError::new(
+        state.error_verbosity(),
+        GetBookErrorType::IdTooBig { id },
     ))
 }

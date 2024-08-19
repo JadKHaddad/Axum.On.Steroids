@@ -107,6 +107,10 @@ impl Server {
             .route(
                 "/get_book_not_found",
                 get(books::get_book::get_book_not_found),
+            )
+            .route(
+                "/get_book_id_too_big",
+                get(books::get_book::get_book_id_too_big),
             );
 
         let post_json_app = Router::new().route(

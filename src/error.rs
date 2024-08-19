@@ -731,7 +731,9 @@ impl<ET, C> From<ResourceErrorResponse<ET, C>> for ErrorMessage {
 pub struct ResourceError<ET, C> {
     #[serde(skip)]
     verbosity: ErrorVerbosity,
+    #[serde(flatten)]
     error_type: ET,
+    #[serde(rename = "error")]
     context: Option<C>,
 }
 
@@ -778,10 +780,7 @@ where
     ET: ResourceErrorProvider<Context = C>,
 {
     fn from(error: ResourceError<ET, C>) -> Self {
-        let message = match error.verbosity {
-            ErrorVerbosity::None => "",
-            _ => error.error_type.message(),
-        };
+        let message = error.error_type.message();
 
         ResourceErrorResponse { error, message }
     }
