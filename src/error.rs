@@ -225,7 +225,7 @@ impl IntoResponse for ApiError {
 pub struct InternalServerError {
     #[serde(skip)]
     verbosity: ErrorVerbosity,
-    internal_server_error: Option<String>,
+    error: Option<String>,
 }
 
 impl InternalServerError {
@@ -234,12 +234,9 @@ impl InternalServerError {
         let err = format!("{err:#}");
         tracing::error!(%err, "Internal server error");
 
-        let internal_server_error = verbosity.should_generate_error_context().then_some(err);
+        let error = verbosity.should_generate_error_context().then_some(err);
 
-        InternalServerError {
-            verbosity,
-            internal_server_error,
-        }
+        InternalServerError { verbosity, error }
     }
 
     fn status_code(&self) -> StatusCode {
@@ -257,9 +254,9 @@ pub enum QueryErrorType {
 pub struct QueryError {
     #[serde(skip)]
     verbosity: ErrorVerbosity,
-    query_error_type: QueryErrorType,
-    query_error_reason: Option<String>,
-    query_expected_schema: Option<String>,
+    r#type: QueryErrorType,
+    reason: Option<String>,
+    expected_schema: Option<String>,
 }
 
 impl QueryError {
@@ -267,32 +264,31 @@ impl QueryError {
         verbosity: ErrorVerbosity,
         query_rejection: QueryRejection,
     ) -> ApiError {
-        let query_error_type = match query_rejection {
+        let r#type = match query_rejection {
             QueryRejection::FailedToDeserializeQueryString(_) => QueryErrorType::DeserializeError,
             _ => return InternalServerError::from_generic_error(verbosity, query_rejection).into(),
         };
 
-        let (query_error_reason, query_expected_schema) =
-            match verbosity.should_generate_error_context() {
-                true => {
-                    let query_error_reason = query_rejection.body_text();
-                    let query_expected_schema = match serde_yaml::to_string(&schema_for!(T)) {
-                        Ok(schema) => schema,
-                        Err(err) => {
-                            return InternalServerError::from_generic_error(verbosity, err).into()
-                        }
-                    };
+        let (reason, expected_schema) = match verbosity.should_generate_error_context() {
+            true => {
+                let reason = query_rejection.body_text();
+                let expected_schema = match serde_yaml::to_string(&schema_for!(T)) {
+                    Ok(schema) => schema,
+                    Err(err) => {
+                        return InternalServerError::from_generic_error(verbosity, err).into()
+                    }
+                };
 
-                    (Some(query_error_reason), Some(query_expected_schema))
-                }
-                false => (None, None),
-            };
+                (Some(reason), Some(expected_schema))
+            }
+            false => (None, None),
+        };
 
         QueryError {
             verbosity,
-            query_error_type,
-            query_error_reason,
-            query_expected_schema,
+            r#type,
+            reason,
+            expected_schema,
         }
         .into()
     }
@@ -316,9 +312,9 @@ pub enum JsonBodyErrorType {
 pub struct JsonBodyError {
     #[serde(skip)]
     verbosity: ErrorVerbosity,
-    json_body_error_type: JsonBodyErrorType,
-    json_body_error_reason: Option<String>,
-    json_body_expected_schema: Option<String>,
+    r#type: JsonBodyErrorType,
+    reason: Option<String>,
+    expected_schema: Option<String>,
 }
 
 impl JsonBodyError {
@@ -326,43 +322,39 @@ impl JsonBodyError {
         verbosity: ErrorVerbosity,
         json_rejection: JsonRejection,
     ) -> ApiError {
-        let json_body_error_type = match json_rejection {
+        let r#type = match json_rejection {
             JsonRejection::JsonDataError(_) => JsonBodyErrorType::DataError,
             JsonRejection::JsonSyntaxError(_) => JsonBodyErrorType::SyntaxError,
             JsonRejection::MissingJsonContentType(_) => JsonBodyErrorType::MissingJsonContentType,
             _ => return InternalServerError::from_generic_error(verbosity, json_rejection).into(),
         };
 
-        let (json_body_error_reason, json_body_expected_schema) =
-            match verbosity.should_generate_error_context() {
-                true => {
-                    let json_body_error_reason = json_rejection.body_text();
-                    let json_body_expected_schema = match serde_yaml::to_string(&schema_for!(T)) {
-                        Ok(schema) => schema,
-                        Err(err) => {
-                            return InternalServerError::from_generic_error(verbosity, err).into()
-                        }
-                    };
+        let (reason, expected_schema) = match verbosity.should_generate_error_context() {
+            true => {
+                let reason = json_rejection.body_text();
+                let expected_schema = match serde_yaml::to_string(&schema_for!(T)) {
+                    Ok(schema) => schema,
+                    Err(err) => {
+                        return InternalServerError::from_generic_error(verbosity, err).into()
+                    }
+                };
 
-                    (
-                        Some(json_body_error_reason),
-                        Some(json_body_expected_schema),
-                    )
-                }
-                false => (None, None),
-            };
+                (Some(reason), Some(expected_schema))
+            }
+            false => (None, None),
+        };
 
         JsonBodyError {
             verbosity,
-            json_body_error_type,
-            json_body_error_reason,
-            json_body_expected_schema,
+            r#type,
+            reason,
+            expected_schema,
         }
         .into()
     }
 
     fn status_code(&self) -> StatusCode {
-        match self.json_body_error_type {
+        match self.r#type {
             JsonBodyErrorType::DataError => StatusCode::UNPROCESSABLE_ENTITY,
             JsonBodyErrorType::SyntaxError => StatusCode::BAD_REQUEST,
             JsonBodyErrorType::MissingJsonContentType => StatusCode::UNSUPPORTED_MEDIA_TYPE,
@@ -380,8 +372,8 @@ pub enum PathErrorType {
 pub struct PathError {
     #[serde(skip)]
     verbosity: ErrorVerbosity,
-    path_error_type: PathErrorType,
-    path_error_reason: Option<String>,
+    r#type: PathErrorType,
+    reason: Option<String>,
 }
 
 impl PathError {
@@ -389,7 +381,7 @@ impl PathError {
         verbosity: ErrorVerbosity,
         path_rejection: PathRejection,
     ) -> ApiError {
-        let path_error_type = match path_rejection {
+        let r#type = match path_rejection {
             PathRejection::FailedToDeserializePathParams(ref err) => match err.kind() {
                 PathErrorKind::Message(_)
                 | PathErrorKind::InvalidUtf8InPathParam { .. }
@@ -404,14 +396,14 @@ impl PathError {
             _ => return InternalServerError::from_generic_error(verbosity, path_rejection).into(),
         };
 
-        let path_error_reason = verbosity
+        let reason = verbosity
             .should_generate_error_context()
             .then_some(path_rejection.body_text());
 
         PathError {
             verbosity,
-            path_error_type,
-            path_error_reason,
+            r#type,
+            reason,
         }
         .into()
     }
@@ -470,25 +462,25 @@ pub enum ApiKeyErrorType {
 pub struct ApiKeyError {
     #[serde(skip)]
     verbosity: ErrorVerbosity,
-    api_key_error_type: ApiKeyErrorType,
-    api_key_error_reason: Option<Cow<'static, str>>,
+    r#type: ApiKeyErrorType,
+    reason: Option<Cow<'static, str>>,
 }
 
 impl ApiKeyError {
-    pub fn new(verbosity: ErrorVerbosity, api_key_error_type: ApiKeyErrorType) -> Self {
-        let api_key_error_reason = verbosity
+    pub fn new(verbosity: ErrorVerbosity, r#type: ApiKeyErrorType) -> Self {
+        let reason = verbosity
             .should_generate_error_context()
-            .then(|| Self::reason(&api_key_error_type));
+            .then(|| Self::reason(&r#type));
 
         ApiKeyError {
             verbosity,
-            api_key_error_type,
-            api_key_error_reason,
+            r#type,
+            reason,
         }
     }
 
-    fn reason(api_key_error_type: &ApiKeyErrorType) -> Cow<'static, str> {
-        match api_key_error_type {
+    fn reason(r#type: &ApiKeyErrorType) -> Cow<'static, str> {
+        match r#type {
             ApiKeyErrorType::Missing => Cow::Borrowed("API key is missing"),
             ApiKeyErrorType::InvalidChars { err } => {
                 Cow::Owned(format!("API key contains invalid characters: {err}"))
@@ -498,7 +490,7 @@ impl ApiKeyError {
     }
 
     fn status_code(&self) -> StatusCode {
-        match self.api_key_error_type {
+        match self.r#type {
             ApiKeyErrorType::Missing => StatusCode::UNAUTHORIZED,
             ApiKeyErrorType::InvalidChars { .. } => StatusCode::UNAUTHORIZED,
             ApiKeyErrorType::Invalid => StatusCode::FORBIDDEN,
@@ -535,25 +527,25 @@ pub enum BasicAuthErrorType {
 pub struct BasicAuthError {
     #[serde(skip)]
     verbosity: ErrorVerbosity,
-    basic_auth_error_type: BasicAuthErrorType,
-    basic_auth_error_reason: Option<Cow<'static, str>>,
+    r#type: BasicAuthErrorType,
+    reason: Option<Cow<'static, str>>,
 }
 
 impl BasicAuthError {
-    pub fn new(verbosity: ErrorVerbosity, basic_auth_error_type: BasicAuthErrorType) -> Self {
-        let basic_auth_error_reason = verbosity
+    pub fn new(verbosity: ErrorVerbosity, r#type: BasicAuthErrorType) -> Self {
+        let reason = verbosity
             .should_generate_error_context()
-            .then(|| Self::reason(&basic_auth_error_type));
+            .then(|| Self::reason(&r#type));
 
         BasicAuthError {
             verbosity,
-            basic_auth_error_type,
-            basic_auth_error_reason,
+            r#type,
+            reason,
         }
     }
 
-    fn reason(basic_auth_error_type: &BasicAuthErrorType) -> Cow<'static, str> {
-        match basic_auth_error_type {
+    fn reason(r#type: &BasicAuthErrorType) -> Cow<'static, str> {
+        match r#type {
             BasicAuthErrorType::AuthMissing => Cow::Borrowed("Authorization header is missing"),
             BasicAuthErrorType::AuthInvalidChars { err } => Cow::Owned(format!(
                 "Authorization header contains invalid characters: {err}"
@@ -593,25 +585,25 @@ pub enum BearerErrorType {
 pub struct BearerError {
     #[serde(skip)]
     verbosity: ErrorVerbosity,
-    bearer_error_type: BearerErrorType,
-    bearer_error_reason: Option<Cow<'static, str>>,
+    r#type: BearerErrorType,
+    reason: Option<Cow<'static, str>>,
 }
 
 impl BearerError {
-    pub fn new(verbosity: ErrorVerbosity, bearer_error_type: BearerErrorType) -> Self {
-        let bearer_error_reason = verbosity
+    pub fn new(verbosity: ErrorVerbosity, r#type: BearerErrorType) -> Self {
+        let reason = verbosity
             .should_generate_error_context()
-            .then(|| Self::reason(&bearer_error_type));
+            .then(|| Self::reason(&r#type));
 
         BearerError {
             verbosity,
-            bearer_error_type,
-            bearer_error_reason,
+            r#type,
+            reason,
         }
     }
 
-    fn reason(bearer_error_type: &BearerErrorType) -> Cow<'static, str> {
-        match bearer_error_type {
+    fn reason(r#type: &BearerErrorType) -> Cow<'static, str> {
+        match r#type {
             BearerErrorType::AuthMissing => Cow::Borrowed("Authorization header is missing"),
             BearerErrorType::AuthInvalidChars { err } => Cow::Owned(format!(
                 "Authorization header contains invalid characters: {err}"
@@ -646,25 +638,25 @@ pub enum JwtErrorType {
 pub struct JwtError {
     #[serde(skip)]
     verbosity: ErrorVerbosity,
-    jwt_error_type: JwtErrorType,
-    jwt_error_reason: Option<Cow<'static, str>>,
+    r#type: JwtErrorType,
+    reason: Option<Cow<'static, str>>,
 }
 
 impl JwtError {
-    pub fn new(verbosity: ErrorVerbosity, jwt_error_type: JwtErrorType) -> Self {
-        let jwt_error_reason = verbosity
+    pub fn new(verbosity: ErrorVerbosity, r#type: JwtErrorType) -> Self {
+        let reason = verbosity
             .should_generate_error_context()
-            .then(|| Self::reason(&jwt_error_type));
+            .then(|| Self::reason(&r#type));
 
         JwtError {
             verbosity,
-            jwt_error_type,
-            jwt_error_reason,
+            r#type,
+            reason,
         }
     }
 
-    fn reason(jwt_error_type: &JwtErrorType) -> Cow<'static, str> {
-        match jwt_error_type {
+    fn reason(r#type: &JwtErrorType) -> Cow<'static, str> {
+        match r#type {
             JwtErrorType::Invalid { err } => Cow::Owned(format!("JWT is invalid: {err}")),
             JwtErrorType::ExpiredSignature => Cow::Borrowed("JWT has expired"),
             JwtErrorType::Forbidden => Cow::Borrowed("User does not have a valid role"),
@@ -672,7 +664,7 @@ impl JwtError {
     }
 
     fn status_code(&self) -> StatusCode {
-        match self.jwt_error_type {
+        match self.r#type {
             JwtErrorType::Invalid { .. } | JwtErrorType::ExpiredSignature => {
                 StatusCode::UNAUTHORIZED
             }
@@ -685,7 +677,7 @@ impl JwtError {
 pub struct ValidationError {
     #[serde(skip)]
     verbosity: ErrorVerbosity,
-    validation_error_reason: Option<String>,
+    reason: Option<String>,
 }
 
 impl ValidationError {
@@ -693,14 +685,11 @@ impl ValidationError {
         verbosity: ErrorVerbosity,
         validation_errors: ValidationErrors,
     ) -> Self {
-        let validation_error_reason = verbosity
+        let reason = verbosity
             .should_generate_error_context()
             .then_some(validation_errors.to_string());
 
-        ValidationError {
-            verbosity,
-            validation_error_reason,
-        }
+        ValidationError { verbosity, reason }
     }
 
     fn status_code(&self) -> StatusCode {

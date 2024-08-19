@@ -48,7 +48,7 @@ pub enum GetBookErrorType {
 
 #[derive(Debug, Serialize)]
 pub struct GetBookErrorContext {
-    pub reason: String,
+    pub context: String,
 }
 
 impl ResourceErrorProvider for GetBookErrorType {
@@ -75,10 +75,10 @@ impl ResourceErrorProvider for GetBookErrorType {
     fn context(&self) -> Self::Context {
         match self {
             GetBookErrorType::NotFound { id } => GetBookErrorContext {
-                reason: format!("Book with id {} not found", id),
+                context: format!("Book with id {} not found", id),
             },
             GetBookErrorType::IdTooBig { id } => GetBookErrorContext {
-                reason: format!("Id {} is too big", id),
+                context: format!("Id {} is too big", id),
             },
         }
     }
