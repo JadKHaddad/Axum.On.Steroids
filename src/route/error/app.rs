@@ -1,6 +1,6 @@
-use crate::server_error;
 use crate::{
     error::ApiError,
+    server_error,
     state::{ApiState, StateProvider},
 };
 use axum::{extract::State, routing::get, Router};

@@ -1,12 +1,12 @@
 mod claims;
 pub mod cli_args;
-mod error;
+pub mod error;
 mod extractor;
 mod middleware;
 mod openid_configuration;
 mod route;
 pub mod server;
-mod state;
+pub mod state;
 mod types;
 mod utils;
 
@@ -17,6 +17,12 @@ mod test;
 /// Instead of writing:
 ///
 /// ```rust
+/// use the_axum::{
+///     error::ApiError,
+///     state::{ApiState, StateProvider},
+/// };
+/// use axum::extract::State;
+///
 /// pub async fn route(State(state): State<ApiState>) -> Result<(), ApiError> {
 ///     tokio::fs::read_to_string("non_existent_file.txt")
 ///         .await
@@ -28,6 +34,13 @@ mod test;
 /// You can write:
 ///
 /// ```rust
+/// use the_axum::{
+///     server_error,
+///     error::ApiError,
+///     state::{ApiState, StateProvider},
+/// };
+/// use axum::extract::State;
+///
 /// pub async fn route(State(state): State<ApiState>) -> Result<(), ApiError> {
 ///     tokio::fs::read_to_string("non_existent_file.txt")
 ///         .await
@@ -35,10 +48,9 @@ mod test;
 ///         .map_err(server_error!(state))
 /// }
 /// ```
+#[macro_export]
 macro_rules! server_error {
     ($state:ident) => {
         |err| ApiError::from_generic_error($state.error_verbosity(), err)
     };
 }
-
-use server_error;
