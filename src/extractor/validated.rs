@@ -10,31 +10,25 @@ use crate::{
     state::StateProvider,
 };
 
-use super::extractor::{ExtractorFromRequest, ExtractorFromRequestParts};
+use super::Extractor;
 
 /// An extractor that validates the extracted data by another extractor.
-pub struct ValidatedFromRequestParts<X>(pub X);
+pub struct Validated<X>(pub X);
 
-#[async_trait]
-impl<X, S> FromRequestParts<S> for ValidatedFromRequestParts<X>
-where
-    X: FromRequestParts<S, Rejection = ApiError>,
-    X: ExtractorFromRequestParts<S>,
-    <X as ExtractorFromRequestParts<S>>::Extracted: Validate,
-    S: Send + Sync + StateProvider,
-{
-    type Rejection = ApiError;
-
-    #[tracing::instrument(name = "validated_extractor", skip_all)]
-    async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
-        let inner = X::from_request_parts(parts, state).await?;
+impl<X> Validated<X> {
+    fn extract<S>(inner: X, state: &S) -> Result<Self, ApiError>
+    where
+        X: Extractor<S>,
+        S: StateProvider,
+        <X as Extractor<S>>::Extracted: Validate,
+    {
         let extracted = inner.extracted();
 
         match extracted.validate() {
             Ok(_) => {
                 tracing::trace!("Validated");
 
-                Ok(ValidatedFromRequestParts(inner))
+                Ok(Validated(inner))
             }
             Err(errors) => {
                 tracing::warn!(?errors, "Validation errors");
@@ -47,15 +41,30 @@ where
     }
 }
 
-/// An extractor that validates the extracted data by another extractor.
-pub struct ValidatedFromRequest<X>(pub X);
+#[async_trait]
+impl<X, S> FromRequestParts<S> for Validated<X>
+where
+    X: FromRequestParts<S, Rejection = ApiError>,
+    X: Extractor<S>,
+    <X as Extractor<S>>::Extracted: Validate,
+    S: Send + Sync + StateProvider,
+{
+    type Rejection = ApiError;
+
+    #[tracing::instrument(name = "validated_extractor", skip_all)]
+    async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
+        let inner = X::from_request_parts(parts, state).await?;
+
+        Self::extract(inner, state)
+    }
+}
 
 #[async_trait]
-impl<X, S> FromRequest<S> for ValidatedFromRequest<X>
+impl<X, S> FromRequest<S> for Validated<X>
 where
     X: FromRequest<S, Rejection = ApiError>,
-    X: ExtractorFromRequest<S>,
-    <X as ExtractorFromRequest<S>>::Extracted: Validate,
+    X: Extractor<S>,
+    <X as Extractor<S>>::Extracted: Validate,
     S: Send + Sync + StateProvider,
 {
     type Rejection = ApiError;
@@ -63,21 +72,7 @@ where
     #[tracing::instrument(name = "validated_extractor", skip_all)]
     async fn from_request(req: Request, state: &S) -> Result<Self, Self::Rejection> {
         let inner = X::from_request(req, state).await?;
-        let extracted = inner.extracted();
 
-        match extracted.validate() {
-            Ok(_) => {
-                tracing::trace!("Validated");
-
-                Ok(ValidatedFromRequest(inner))
-            }
-            Err(errors) => {
-                tracing::warn!(?errors, "Validation errors");
-
-                let verbosity = state.error_verbosity();
-
-                Err(ValidationError::from_validation_errors(verbosity, errors).into())
-            }
-        }
+        Self::extract(inner, state)
     }
 }

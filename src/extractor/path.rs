@@ -12,7 +12,7 @@ use crate::{
     state::StateProvider,
 };
 
-use super::extractor::ExtractorFromRequestParts;
+use super::Extractor;
 
 /// A Wrapper around [`axum::extract::Path`] that rejects with an [`ApiError`].
 ///
@@ -48,7 +48,7 @@ where
     }
 }
 
-impl<T, S> ExtractorFromRequestParts<S> for ApiPath<T>
+impl<T, S> Extractor<S> for ApiPath<T>
 where
     T: DeserializeOwned + JsonSchema + Debug + Send,
     S: Send + Sync + StateProvider,
@@ -57,5 +57,13 @@ where
 
     fn extracted(&self) -> &Self::Extracted {
         &self.0
+    }
+
+    fn extracted_mut(&mut self) -> &mut Self::Extracted {
+        &mut self.0
+    }
+
+    fn into_extracted(self) -> Self::Extracted {
+        self.0
     }
 }

@@ -7,7 +7,7 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use validator::Validate;
 
-use crate::extractor::{json::ApiJson, validated::ValidatedFromRequest};
+use crate::extractor::{json::ApiJson, validated::Validated};
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema, Validate)]
 pub struct Person {
@@ -25,8 +25,6 @@ impl IntoResponse for Person {
     }
 }
 
-pub async fn validate_a_person(
-    ValidatedFromRequest(ApiJson(person)): ValidatedFromRequest<ApiJson<Person>>,
-) -> Person {
+pub async fn validate_a_person(Validated(ApiJson(person)): Validated<ApiJson<Person>>) -> Person {
     person
 }
