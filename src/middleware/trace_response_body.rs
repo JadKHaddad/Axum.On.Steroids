@@ -6,10 +6,7 @@ use axum::{
 };
 use http_body_util::BodyExt;
 
-use crate::{
-    error::{ApiError, InternalServerError},
-    state::StateProvider,
-};
+use crate::{error::ApiError, state::StateProvider};
 
 /// Middlware to trace the response body.
 ///
@@ -25,7 +22,7 @@ pub async fn trace_response_body<S: StateProvider>(
     let bytes = body
         .collect()
         .await
-        .map_err(|err| InternalServerError::from_generic_error(state.error_verbosity(), err))?
+        .map_err(|err| ApiError::from_generic_error(state.error_verbosity(), err))?
         .to_bytes();
 
     if let Ok(body) = std::str::from_utf8(&bytes) {

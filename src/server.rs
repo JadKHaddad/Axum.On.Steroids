@@ -19,7 +19,7 @@ use crate::{
         trace_response_body::trace_response_body,
     },
     openid_configuration::OpenIdConfiguration,
-    route::{api_key_protected, base, books, post_json, validated},
+    route::{api_key_protected, base, books, error, post_json, validated},
     state::ApiState,
     types::{used_api_key::UsedApiKey, used_basic_auth::UsedBasicAuth},
 };
@@ -103,6 +103,7 @@ impl Server {
             .nest("/post_json", post_json::app::app())
             .nest("/validated", validated::app::app())
             .nest("/books", books::app::app())
+            .nest("/error", error::app::app())
             .nest("/", base::app::app())
             .layer(middleware::from_fn(trace_headers))
             .layer(middleware::from_fn_with_state(

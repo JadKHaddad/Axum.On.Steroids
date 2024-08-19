@@ -202,6 +202,10 @@ impl ApiError {
             _ => None,
         }
     }
+
+    pub fn from_generic_error<E: Into<anyhow::Error>>(verbosity: ErrorVerbosity, err: E) -> Self {
+        InternalServerError::from_generic_error(verbosity, err).into()
+    }
 }
 
 impl From<ApiError> for ApiErrorResponse {
@@ -266,7 +270,7 @@ impl QueryError {
     ) -> ApiError {
         let r#type = match query_rejection {
             QueryRejection::FailedToDeserializeQueryString(_) => QueryErrorType::DeserializeError,
-            _ => return InternalServerError::from_generic_error(verbosity, query_rejection).into(),
+            _ => return ApiError::from_generic_error(verbosity, query_rejection),
         };
 
         let (reason, expected_schema) = match verbosity.should_generate_error_context() {
@@ -274,9 +278,7 @@ impl QueryError {
                 let reason = query_rejection.body_text();
                 let expected_schema = match serde_yaml::to_string(&schema_for!(T)) {
                     Ok(schema) => schema,
-                    Err(err) => {
-                        return InternalServerError::from_generic_error(verbosity, err).into()
-                    }
+                    Err(err) => return ApiError::from_generic_error(verbosity, err),
                 };
 
                 (Some(reason), Some(expected_schema))
@@ -326,7 +328,7 @@ impl JsonBodyError {
             JsonRejection::JsonDataError(_) => JsonBodyErrorType::DataError,
             JsonRejection::JsonSyntaxError(_) => JsonBodyErrorType::SyntaxError,
             JsonRejection::MissingJsonContentType(_) => JsonBodyErrorType::MissingJsonContentType,
-            _ => return InternalServerError::from_generic_error(verbosity, json_rejection).into(),
+            _ => return ApiError::from_generic_error(verbosity, json_rejection),
         };
 
         let (reason, expected_schema) = match verbosity.should_generate_error_context() {
@@ -334,9 +336,7 @@ impl JsonBodyError {
                 let reason = json_rejection.body_text();
                 let expected_schema = match serde_yaml::to_string(&schema_for!(T)) {
                     Ok(schema) => schema,
-                    Err(err) => {
-                        return InternalServerError::from_generic_error(verbosity, err).into()
-                    }
+                    Err(err) => return ApiError::from_generic_error(verbosity, err),
                 };
 
                 (Some(reason), Some(expected_schema))
@@ -388,12 +388,9 @@ impl PathError {
                 | PathErrorKind::ParseError { .. }
                 | PathErrorKind::ParseErrorAtIndex { .. }
                 | PathErrorKind::ParseErrorAtKey { .. } => PathErrorType::DeserializeError,
-                _ => {
-                    return InternalServerError::from_generic_error(verbosity, path_rejection)
-                        .into()
-                }
+                _ => return ApiError::from_generic_error(verbosity, path_rejection),
             },
-            _ => return InternalServerError::from_generic_error(verbosity, path_rejection).into(),
+            _ => return ApiError::from_generic_error(verbosity, path_rejection),
         };
 
         let reason = verbosity
