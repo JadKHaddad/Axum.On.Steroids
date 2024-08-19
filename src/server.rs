@@ -1,11 +1,7 @@
 use std::{net::SocketAddr, path::Path};
 
 use anyhow::Context;
-use axum::{
-    middleware,
-    routing::{get, post},
-    Router,
-};
+use axum::{middleware, Router};
 use serde::Deserialize;
 use tokio::net::TcpListener;
 use tower::ServiceBuilder;
@@ -20,14 +16,10 @@ use crate::{
     error::ErrorVerbosity,
     middleware::{
         method_not_allowed::method_not_allowed, not_found, trace_headers::trace_headers,
-        trace_response_body::trace_response_body, validate_api_key_and_put_as_extension,
+        trace_response_body::trace_response_body,
     },
     openid_configuration::OpenIdConfiguration,
-    route::{
-        api_key_protected, books, extract_api_key, extract_authenticated_basic_auth,
-        extract_basic_auth, extract_bearer_token, extract_jwt_claims, extract_valid_api_key,
-        extract_valid_api_key_optional, post_json, validated,
-    },
+    route::{api_key_protected, base, books, post_json, validated},
     state::ApiState,
     types::{used_api_key::UsedApiKey, used_basic_auth::UsedBasicAuth},
 };
@@ -102,77 +94,16 @@ impl Server {
         .await
         .context("Failed to create state")?;
 
-        let books_app = Router::new()
-            .route("/get_book", get(books::get_book::get_book))
-            .route(
-                "/get_book_not_found",
-                get(books::get_book::get_book_not_found),
-            )
-            .route(
-                "/get_book_id_too_big",
-                get(books::get_book::get_book_id_too_big),
-            );
-
-        let post_json_app = Router::new().route(
-            "/echo_a_person",
-            post(post_json::echo_a_person::echo_a_person),
-        );
-
-        let validate_app = Router::new().route(
-            "/validate_a_person",
-            post(validated::validate_a_person::validate_a_person),
-        );
-
-        let api_key_protected_app = Router::new()
-            .route("/", get(|| async { "API Key Protected" }))
-            .route(
-                "/do_not_use_extension",
-                get(api_key_protected::do_not_use_extension::do_not_use_extension),
-            )
-            .route(
-                "/valid_api_key_from_extension",
-                get(api_key_protected::valid_api_key_from_extension::valid_api_key_from_extension),
-            )
-            .layer(middleware::from_fn_with_state(
-                state.clone(),
-                validate_api_key_and_put_as_extension::validate_api_key_and_put_as_extension,
-            ));
-
         let app = Router::new()
             .fallback(not_found::not_found::<ApiState>)
-            .nest("/api_key_protected", api_key_protected_app)
-            .nest("/post_json", post_json_app)
-            .nest("/validated", validate_app)
-            .nest("/books", books_app)
-            .route("/", get(|| async { "Index" }))
-            .route(
-                "/extract_valid_jwt_claims_using_extractor",
-                get(extract_jwt_claims::extract_valid_jwt_claims_using_extractor),
+            .nest(
+                "/api_key_protected",
+                api_key_protected::app::app(state.clone()),
             )
-            .route(
-                "/extract_bearer_token_using_extractor",
-                get(extract_bearer_token::extract_bearer_token_using_extractor),
-            )
-            .route(
-                "/extract_authenticated_basic_auth_using_extractor",
-                get(extract_authenticated_basic_auth::extract_authenticated_basic_auth_using_extractor),
-            )
-            .route(
-                "/extract_basic_auth_using_extractor",
-                get(extract_basic_auth::extract_basic_auth_using_extractor),
-            )
-            .route(
-                "/extract_api_key_using_extractor",
-                get(extract_api_key::extract_api_key_using_extractor),
-            )
-            .route(
-                "/extract_valid_api_key_using_optional_extractor",
-                get(extract_valid_api_key_optional::extract_valid_api_key_using_optional_extractor),
-            )
-            .route(
-                "/extract_valid_api_key_using_extractor",
-                get(extract_valid_api_key::extract_valid_api_key_using_extractor),
-            )
+            .nest("/post_json", post_json::app::app())
+            .nest("/validated", validated::app::app())
+            .nest("/books", books::app::app())
+            .nest("/", base::app::app())
             .layer(middleware::from_fn(trace_headers))
             .layer(middleware::from_fn_with_state(
                 state.clone(),

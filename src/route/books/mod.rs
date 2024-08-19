@@ -1,6 +1,7 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
+pub mod app;
 pub mod get_book;
 
 #[derive(Debug, Serialize, Deserialize, JsonSchema)]
