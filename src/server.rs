@@ -139,7 +139,7 @@ impl Server {
             ));
 
         let app = Router::new()
-            .fallback(not_found::not_found)
+            .fallback(not_found::not_found::<ApiState>)
             .nest("/api_key_protected", api_key_protected_app)
             .nest("/post_json", post_json_app)
             .nest("/validated", validate_app)
@@ -176,11 +176,11 @@ impl Server {
             .layer(middleware::from_fn(trace_headers))
             .layer(middleware::from_fn_with_state(
                 state.clone(),
-                trace_response_body,
+                trace_response_body::<ApiState>,
             ))
             .layer(middleware::from_fn_with_state(
                 state.clone(),
-                method_not_allowed,
+                method_not_allowed::<ApiState>,
             ))
             .with_state(state)
             .layer(

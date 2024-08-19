@@ -2,9 +2,9 @@ use axum::extract::State;
 
 use crate::{
     error::{ApiError, NotFoundError},
-    state::{ApiState, StateProvider},
+    state::StateProvider,
 };
 
-pub async fn not_found(State(state): State<ApiState>) -> ApiError {
+pub async fn not_found<S: StateProvider>(State(state): State<S>) -> ApiError {
     ApiError::NotFound(NotFoundError::new(state.error_verbosity()))
 }

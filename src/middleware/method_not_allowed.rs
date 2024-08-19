@@ -7,13 +7,12 @@ use axum::{
 
 use crate::{
     error::{ApiError, MethodNotAllowedError},
-    state::ApiState,
     state::StateProvider,
 };
 
 /// Middleware to map axum's `MethodNotAllowed` rejection to our [`ApiError`].
-pub async fn method_not_allowed(
-    State(state): State<ApiState>,
+pub async fn method_not_allowed<S: StateProvider>(
+    State(state): State<S>,
     req: Request,
     next: Next,
 ) -> Result<impl IntoResponse, ApiError> {

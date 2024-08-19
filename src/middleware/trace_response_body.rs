@@ -8,15 +8,14 @@ use http_body_util::BodyExt;
 
 use crate::{
     error::{ApiError, InternalServerError},
-    state::ApiState,
     state::StateProvider,
 };
 
 /// Middlware to trace the response body.
 ///
 /// This is a very expensive middleware, since it reads the entire response body and logs it.
-pub async fn trace_response_body(
-    State(state): State<ApiState>,
+pub async fn trace_response_body<S: StateProvider>(
+    State(state): State<S>,
     req: Request,
     next: Next,
 ) -> Result<impl IntoResponse, ApiError> {
