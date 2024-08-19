@@ -51,10 +51,7 @@ where
     }
 }
 
-impl<T> Extractor for ApiQuery<T>
-where
-    T: DeserializeOwned + JsonSchema + Debug + Send,
-{
+impl<T> Extractor for ApiQuery<T> {
     type Extracted = T;
 
     fn extracted(&self) -> &Self::Extracted {

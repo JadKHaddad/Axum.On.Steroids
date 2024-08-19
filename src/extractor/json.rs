@@ -50,10 +50,7 @@ where
     }
 }
 
-impl<T> Extractor for ApiJson<T>
-where
-    T: DeserializeOwned + JsonSchema + Debug + Send,
-{
+impl<T> Extractor for ApiJson<T> {
     type Extracted = T;
 
     fn extracted(&self) -> &Self::Extracted {
