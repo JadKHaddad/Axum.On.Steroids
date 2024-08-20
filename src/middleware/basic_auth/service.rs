@@ -1,20 +1,26 @@
-use crate::extractor::basic_auth::ApiBasicAuth;
+use crate::{
+    error::{ApiError, BasicAuthErrorType, NotFoundError},
+    extractor::basic_auth::ApiBasicAuth,
+    types::used_basic_auth,
+};
 
-use super::future::ResponseFuture;
-use axum::body::Body as AxumBody;
+use super::{future::ResponseFuture, provider::BasicAuthProvider};
+use axum::{body::Body as AxumBody, response::IntoResponse};
+use futures::FutureExt;
 use http::{Request, Response};
 use std::task::{Context, Poll};
 use tower::Service;
 
 /// Applies basic authentication to the request.
 #[derive(Debug, Clone)]
-pub struct BasicAuth<T> {
+pub struct BasicAuth<T, P> {
     inner: T,
+    provider: P,
 }
 
-impl<T> BasicAuth<T> {
-    pub const fn new(inner: T) -> Self {
-        BasicAuth { inner }
+impl<T, P> BasicAuth<T, P> {
+    pub const fn new(inner: T, provider: P) -> Self {
+        BasicAuth { inner, provider }
     }
 }
 
@@ -27,8 +33,9 @@ impl<T> BasicAuth<T> {
 #[derive(Clone)]
 pub struct BasicAuthToken;
 
-impl<S, ReqBody> Service<Request<ReqBody>> for BasicAuth<S>
+impl<S, ReqBody, P> Service<Request<ReqBody>> for BasicAuth<S, P>
 where
+    P: BasicAuthProvider,
     S: Service<Request<ReqBody>, Response = Response<AxumBody>>,
 {
     type Response = Response<AxumBody>;
@@ -45,9 +52,15 @@ where
         let (parts, body) = request.into_parts();
 
         match ApiBasicAuth::from_req_parts(&parts, crate::error::ErrorVerbosity::Full) {
-            Ok(_) => {
+            Ok(ApiBasicAuth(used_basic_auth)) => {
                 let request = Request::from_parts(parts, body);
                 let future = self.inner.call(request);
+
+                // mal guck
+                let auth_future = self.provider.authenticate(
+                    &used_basic_auth.username,
+                    used_basic_auth.password.as_deref(),
+                );
 
                 ResponseFuture::future(future)
             }

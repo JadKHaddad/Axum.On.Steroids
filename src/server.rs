@@ -15,8 +15,11 @@ use tower_http::{
 use crate::{
     error::ErrorVerbosity,
     middleware::{
-        basic_auth::layer::BasicAuthLayer, method_not_allowed::method_not_allowed, not_found,
-        trace_headers::trace_headers, trace_response_body::trace_response_body,
+        basic_auth::{layer::BasicAuthLayer, provider::DummyAuthProvider},
+        method_not_allowed::method_not_allowed,
+        not_found,
+        trace_headers::trace_headers,
+        trace_response_body::trace_response_body,
     },
     openid_configuration::OpenIdConfiguration,
     route::{api_key_protected, base, books, error, post_json, validated},
@@ -106,7 +109,7 @@ impl Server {
             .nest("/error", error::app::app())
             .nest("/", base::app::app())
             .route("/ex", get(ex))
-            .layer(BasicAuthLayer::new())
+            .layer(BasicAuthLayer::new(DummyAuthProvider {}))
             .layer(middleware::from_fn(trace_headers))
             .layer(middleware::from_fn_with_state(
                 state.clone(),
