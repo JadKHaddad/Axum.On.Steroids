@@ -1,7 +1,7 @@
 use std::{net::SocketAddr, path::Path};
 
 use anyhow::Context;
-use axum::{middleware, Router};
+use axum::{middleware, routing::get, Extension, Router};
 use serde::Deserialize;
 use tokio::net::TcpListener;
 use tower::ServiceBuilder;
@@ -15,8 +15,8 @@ use tower_http::{
 use crate::{
     error::ErrorVerbosity,
     middleware::{
-        method_not_allowed::method_not_allowed, not_found, trace_headers::trace_headers,
-        trace_response_body::trace_response_body,
+        basic_auth::layer::BasicAuthLayer, method_not_allowed::method_not_allowed, not_found,
+        trace_headers::trace_headers, trace_response_body::trace_response_body,
     },
     openid_configuration::OpenIdConfiguration,
     route::{api_key_protected, base, books, error, post_json, validated},
@@ -105,6 +105,8 @@ impl Server {
             .nest("/books", books::app::app())
             .nest("/error", error::app::app())
             .nest("/", base::app::app())
+            .route("/ex", get(ex))
+            .layer(BasicAuthLayer::new())
             .layer(middleware::from_fn(trace_headers))
             .layer(middleware::from_fn_with_state(
                 state.clone(),
@@ -144,6 +146,10 @@ impl Server {
 
         Ok(())
     }
+}
+
+async fn ex(Extension(string): Extension<String>) -> String {
+    string
 }
 
 async fn shutdown_signal() {

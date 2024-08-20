@@ -78,6 +78,19 @@ impl ApiBasicAuth {
             None => (basic_auth.to_string(), None),
         }
     }
+
+    pub fn from_req_parts(parts: &Parts, verbosity: ErrorVerbosity) -> Result<Self, ApiError> {
+        let authorization = Self::extract_authorization(parts, verbosity)?;
+        let encoded_basic = Self::extract_encoded_basic(authorization, verbosity)?;
+        let decoded = Self::decode(encoded_basic, verbosity)?;
+        let (username, password) = Self::split(decoded);
+
+        let used_basic_auth = UsedBasicAuth { username, password };
+
+        tracing::trace!(?used_basic_auth, "Extracted");
+
+        Ok(ApiBasicAuth(used_basic_auth))
+    }
 }
 
 #[async_trait]
@@ -91,15 +104,6 @@ where
     async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
         let verbosity = state.error_verbosity();
 
-        let authorization = Self::extract_authorization(parts, verbosity)?;
-        let encoded_basic = Self::extract_encoded_basic(authorization, verbosity)?;
-        let decoded = Self::decode(encoded_basic, verbosity)?;
-        let (username, password) = Self::split(decoded);
-
-        let used_basic_auth = UsedBasicAuth { username, password };
-
-        tracing::trace!(?used_basic_auth, "Extracted");
-
-        Ok(ApiBasicAuth(used_basic_auth))
+        Self::from_req_parts(parts, verbosity)
     }
 }
