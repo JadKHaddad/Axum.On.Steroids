@@ -1926,6 +1926,7 @@ dependencies = [
  "derivative",
  "derive_more",
  "dotenv",
+ "http",
  "http-body",
  "http-body-util",
  "jsonwebtoken",

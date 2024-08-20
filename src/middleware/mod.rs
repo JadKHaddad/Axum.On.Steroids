@@ -1,3 +1,4 @@
+pub mod basic_auth;
 pub mod method_not_allowed;
 pub mod not_found;
 pub mod trace_headers;
