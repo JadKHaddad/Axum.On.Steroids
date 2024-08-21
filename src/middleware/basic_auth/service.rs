@@ -5,7 +5,8 @@ use crate::{
 };
 
 use super::{future::ResponseFuture, provider::BasicAuthProvider};
-use axum::body::Body as AxumBody;
+use axum::{body::Body as AxumBody, response::IntoResponse};
+use futures::FutureExt;
 use http::{Request, Response};
 use std::task::{Context, Poll};
 use tower::Service;
@@ -34,8 +35,8 @@ pub struct BasicAuthToken;
 
 impl<S, ReqBody, P> Service<Request<ReqBody>> for BasicAuth<S, P>
 where
-    P: BasicAuthProvider,
-    S: Service<Request<ReqBody>, Response = Response<AxumBody>>,
+    P: BasicAuthProvider + Send + Clone + 'static,
+    S: Service<Request<ReqBody>, Response = Response<AxumBody>> + Send,
 {
     type Response = Response<AxumBody>;
     type Error = S::Error;
@@ -55,13 +56,18 @@ where
                 let request = Request::from_parts(parts, body);
                 let future = self.inner.call(request);
 
-                // mal guck
-                let auth_future = self.provider.authenticate(
-                    &used_basic_auth.username,
-                    used_basic_auth.password.as_deref(),
-                );
+                let provider = self.provider.clone();
 
-                ResponseFuture::future(future)
+                let boxed = Box::pin(async move {
+                    provider
+                        .authenticate(
+                            &used_basic_auth.username,
+                            used_basic_auth.password.as_deref(),
+                        )
+                        .await
+                });
+
+                ResponseFuture::future(boxed, future)
             }
             Err(err) => ResponseFuture::api_error(err),
         }

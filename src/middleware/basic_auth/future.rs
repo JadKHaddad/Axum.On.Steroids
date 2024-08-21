@@ -8,6 +8,11 @@ use std::{
     task::{Context, Poll},
 };
 
+enum State {
+    Authorizing,
+    Authorized,
+}
+
 pin_project! {
     pub struct ResponseFuture<F> {
         #[pin]
@@ -16,9 +21,13 @@ pin_project! {
 }
 
 impl<F> ResponseFuture<F> {
-    pub fn future(future: F) -> Self {
+    pub fn future(auth: Pin<Box<dyn Future<Output = bool> + Send + 'static>>, future: F) -> Self {
         Self {
-            kind: Kind::Future { future },
+            kind: Kind::Future {
+                state: State::Authorizing,
+                auth,
+                future,
+            },
         }
     }
 
@@ -35,6 +44,9 @@ pin_project! {
     #[project = KindProj]
     enum Kind<F> {
         Future {
+            state: State,
+
+            auth: Pin<Box<dyn Future<Output=bool> + Send + 'static>>,
             #[pin]
             future: F,
         },
@@ -52,12 +64,33 @@ where
 
     fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
         match self.project().kind.project() {
-            KindProj::Future { future } => future.poll(cx),
+            KindProj::Future {
+                state,
+                auth,
+                future,
+            } => match state {
+                State::Authorizing => match auth.as_mut().poll(cx) {
+                    Poll::Ready(true) => {
+                        *state = State::Authorized;
+
+                        future.poll(cx)
+                    }
+                    Poll::Ready(false) => {
+                        let response = ApiError::default().into_response();
+
+                        Poll::Ready(Ok(response))
+                    }
+                    Poll::Pending => Poll::Pending,
+                },
+                State::Authorized => future.poll(cx),
+            },
+
             KindProj::ApiError { api_error } => {
                 let response = api_error
                     .take()
                     .expect("future polled after completion")
                     .into_response();
+
                 Poll::Ready(Ok(response))
             }
         }

@@ -232,7 +232,7 @@ impl IntoResponse for ApiError {
     }
 }
 
-#[derive(Debug, Serialize, Default)]
+#[derive(Debug, Serialize)]
 pub struct InternalServerError {
     #[serde(skip)]
     verbosity: ErrorVerbosity,
@@ -247,11 +247,22 @@ impl InternalServerError {
 
         let error = verbosity.should_generate_error_context().then_some(err);
 
-        InternalServerError { verbosity, error }
+        Self { verbosity, error }
     }
 
     fn status_code(&self) -> StatusCode {
         StatusCode::INTERNAL_SERVER_ERROR
+    }
+}
+
+impl Default for InternalServerError {
+    fn default() -> Self {
+        tracing::error!("Internal server error");
+
+        Self {
+            verbosity: Default::default(),
+            error: None,
+        }
     }
 }
 
