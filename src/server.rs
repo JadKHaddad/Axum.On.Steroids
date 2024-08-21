@@ -1,7 +1,7 @@
 use std::{net::SocketAddr, path::Path};
 
 use anyhow::Context;
-use axum::{middleware, routing::get, Extension, Router};
+use axum::{middleware, Router};
 use serde::Deserialize;
 use tokio::net::TcpListener;
 use tower::ServiceBuilder;
@@ -116,7 +116,6 @@ impl Server {
             .nest("/books", books::app::app())
             .nest("/error", error::app::app())
             .nest("/", base::app::app())
-            .route("/ex", get(ex))
             .layer(BasicAuthLayer::new(DummyAuthProvider {}))
             .layer(middleware::from_fn(trace_headers))
             .layer(middleware::from_fn_with_state(
@@ -157,10 +156,6 @@ impl Server {
 
         Ok(())
     }
-}
-
-async fn ex(Extension(string): Extension<String>) -> String {
-    string
 }
 
 async fn shutdown_signal() {
