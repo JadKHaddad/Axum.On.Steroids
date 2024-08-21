@@ -22,11 +22,12 @@ use crate::state::JwtValidationError;
 // FIXME: Must not be public to all routes, to prevent defining arbitrary error verbosity.
 // Create PrivateErrorVerbosity in state.rs. and use it as input here.
 // TODO: add a RandomStatus code that returns only a random status code.
-#[derive(Debug, Clone, Copy, Deserialize)]
+#[derive(Debug, Default, Clone, Copy, Deserialize)]
 pub enum ErrorVerbosity {
     /// Server returns an empty response with [`StatusCode::NO_CONTENT`] for all errors.
     None,
     /// Server returns only the appropriate status code.
+    #[default]
     StatusCode,
     /// Server returns only the message with the appropriate status code.
     Message,
@@ -136,6 +137,12 @@ pub enum ApiError {
     Validation(ValidationError),
 }
 
+impl Default for ApiError {
+    fn default() -> Self {
+        Self::InternalServerError(Default::default())
+    }
+}
+
 impl ApiError {
     fn verbosity(&self) -> ErrorVerbosity {
         match self {
@@ -225,7 +232,7 @@ impl IntoResponse for ApiError {
     }
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Default)]
 pub struct InternalServerError {
     #[serde(skip)]
     verbosity: ErrorVerbosity,

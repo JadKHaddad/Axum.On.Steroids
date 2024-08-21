@@ -5,8 +5,7 @@ use crate::{
 };
 
 use super::{future::ResponseFuture, provider::BasicAuthProvider};
-use axum::{body::Body as AxumBody, response::IntoResponse};
-use futures::FutureExt;
+use axum::body::Body as AxumBody;
 use http::{Request, Response};
 use std::task::{Context, Poll};
 use tower::Service;
