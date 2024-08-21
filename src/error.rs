@@ -17,7 +17,7 @@ use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 use validator::ValidationErrors;
 
-use crate::state::JwtValidationError;
+use crate::jwt::JwtValidationError;
 
 // FIXME: Must not be public to all routes, to prevent defining arbitrary error verbosity.
 // Create PrivateErrorVerbosity in state.rs. and use it as input here.

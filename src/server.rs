@@ -14,6 +14,7 @@ use tower_http::{
 
 use crate::{
     error::ErrorVerbosity,
+    jwt::JwkRefresher,
     middleware::{
         basic_auth::{layer::BasicAuthLayer, provider::DummyAuthProvider},
         method_not_allowed::method_not_allowed,
@@ -84,18 +85,25 @@ impl Server {
         let openid_config = self.obtain_openid_config(&http_client).await?;
         tracing::debug!(?openid_config, "Obtained OpenID configuration");
 
-        let state = ApiState::new(
+        let jwk_refresher = JwkRefresher::new(
+            self.config.jwks_time_to_live_in_seconds,
+            openid_config.jwks_uri.clone(),
+            openid_config.issuer,
+            self.config.audience,
             http_client,
+        )
+        .await
+        .context("Failed to create JwkRefresher")?;
+
+        let state = ApiState::new(
             self.config.error_verbosity,
             self.config.api_key_header_name,
             self.config.api_keys,
             self.config.basic_auth_users,
-            openid_config,
-            self.config.jwks_time_to_live_in_seconds,
-            self.config.audience,
+            jwk_refresher,
         )
         .await
-        .context("Failed to create state")?;
+        .context("Failed to create ApiState")?;
 
         let app = Router::new()
             .fallback(not_found::not_found::<ApiState>)

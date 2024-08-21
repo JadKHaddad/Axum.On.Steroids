@@ -2,6 +2,7 @@ mod claims;
 pub mod cli_args;
 pub mod error;
 mod extractor;
+pub mod jwt;
 mod middleware;
 mod openid_configuration;
 mod route;

@@ -29,15 +29,19 @@ where
         let ApiBearerToken(UsedBearerToken { value }) =
             ApiBearerToken::from_request_parts(parts, state).await?;
 
-        let claims = state.jwt_validate::<C>(&value).await.map_err(|err| {
-            tracing::warn!(%err, "Rejection");
+        let claims = state
+            .jwk_refresher()
+            .jwt_validate::<C>(&value)
+            .await
+            .map_err(|err| {
+                tracing::warn!(%err, "Rejection");
 
-            if err.is_expired() {
-                return JwtError::new(verbosity, JwtErrorType::ExpiredSignature);
-            }
+                if err.is_expired() {
+                    return JwtError::new(verbosity, JwtErrorType::ExpiredSignature);
+                }
 
-            JwtError::new(verbosity, JwtErrorType::Invalid { err })
-        })?;
+                JwtError::new(verbosity, JwtErrorType::Invalid { err })
+            })?;
 
         tracing::trace!(?claims, "Extracted");
 
