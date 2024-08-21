@@ -1,12 +1,8 @@
-use crate::{
-    error::{ApiError, BasicAuthErrorType, NotFoundError},
-    extractor::basic_auth::ApiBasicAuth,
-    types::used_basic_auth,
-};
+use crate::extractor::basic_auth::ApiBasicAuth;
 
 use super::{future::ResponseFuture, provider::BasicAuthProvider};
-use axum::{body::Body as AxumBody, response::IntoResponse};
-use futures::FutureExt;
+use axum::body::Body as AxumBody;
+
 use http::{Request, Response};
 use std::task::{Context, Poll};
 use tower::Service;
@@ -67,6 +63,7 @@ where
                         .await
                 });
 
+                // TODO: how do I get to the request to insert extensions?
                 ResponseFuture::future(boxed, future)
             }
             Err(err) => ResponseFuture::api_error(err),
