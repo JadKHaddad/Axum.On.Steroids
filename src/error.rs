@@ -142,6 +142,9 @@ pub enum ApiError {
     Validation(ValidationError),
 }
 
+/// A default [`ApiError`] does not need [`ErrorVerbosity`] and returns an empty [`InternalServerError`].
+///
+/// Uses the default [`ErrorVerbosity`]: [`ErrorVerbosity::StatusCode`].
 impl Default for ApiError {
     fn default() -> Self {
         Self::InternalServerError(Default::default())

@@ -6,7 +6,9 @@ use crate::{
 use axum::{extract::State, routing::get, Router};
 
 pub fn app() -> Router<ApiState> {
-    Router::<ApiState>::new().route("/internal_server_error", get(internal_server_error))
+    Router::<ApiState>::new()
+        .route("/internal_server_error", get(internal_server_error))
+        .route("/default_api_error", get(default_api_error))
 }
 
 pub async fn internal_server_error(State(state): State<ApiState>) -> Result<(), ApiError> {
@@ -14,4 +16,8 @@ pub async fn internal_server_error(State(state): State<ApiState>) -> Result<(), 
         .await
         .map(|_| ())
         .map_err(server_error!(state))
+}
+
+pub async fn default_api_error() -> ApiError {
+    ApiError::default()
 }
