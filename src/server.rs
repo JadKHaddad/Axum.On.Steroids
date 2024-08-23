@@ -116,7 +116,6 @@ impl Server {
             .nest("/books", books::app::app())
             .nest("/error", error::app::app())
             .nest("/", base::app::app())
-            .layer(BasicAuthLayer::new(DummyAuthProvider {}))
             .layer(middleware::from_fn(trace_headers))
             .layer(middleware::from_fn_with_state(
                 state.clone(),
