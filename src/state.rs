@@ -1,6 +1,7 @@
 use std::{ops::Deref, sync::Arc};
 
 use crate::error::ErrorVerbosityProvider;
+use crate::extractor::api_key::ApiKeyProvider;
 use crate::jwt::JwkRefresher;
 
 use crate::{
@@ -12,12 +13,6 @@ use crate::{
 ///
 /// This trait is crate private and therefore has no unnecessary generics.
 pub trait StateProvider {
-    /// Returns the API key header name.
-    fn api_key_header_name(&self) -> &str;
-
-    /// Validates the API key.
-    fn api_key_validate(&self, key: &str) -> bool;
-
     /// Authenticates the basic auth.
     fn basic_auth_authenticate(&self, username: &str, password: Option<&str>) -> bool;
 
@@ -73,7 +68,7 @@ impl ErrorVerbosityProvider for ApiState {
     }
 }
 
-impl StateProvider for ApiState {
+impl ApiKeyProvider for ApiState {
     fn api_key_header_name(&self) -> &str {
         &self.api_key_header_name
     }
@@ -87,7 +82,9 @@ impl StateProvider for ApiState {
 
         false
     }
+}
 
+impl StateProvider for ApiState {
     fn basic_auth_authenticate(&self, username: &str, password: Option<&str>) -> bool {
         for valid_user in self.basic_auth_users.iter() {
             if valid_user.username == username && valid_user.password.as_deref() == password {

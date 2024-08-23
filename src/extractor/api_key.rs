@@ -2,9 +2,16 @@ use axum::{async_trait, extract::FromRequestParts, http::request::Parts};
 
 use crate::{
     error::{ApiError, ApiKeyError, ApiKeyErrorType, ErrorVerbosityProvider},
-    state::StateProvider,
     types::used_api_key::UsedApiKey,
 };
+
+pub trait ApiKeyProvider {
+    /// Returns the API key header name.
+    fn api_key_header_name(&self) -> &str;
+
+    /// Validates the API key.
+    fn api_key_validate(&self, key: &str) -> bool;
+}
 
 /// Extracts the API key from the request headers.
 #[derive(Debug, Clone)]
@@ -13,7 +20,7 @@ pub struct ApiKey(pub UsedApiKey);
 #[async_trait]
 impl<S> FromRequestParts<S> for ApiKey
 where
-    S: Send + Sync + StateProvider + ErrorVerbosityProvider,
+    S: Send + Sync + ApiKeyProvider + ErrorVerbosityProvider,
 {
     type Rejection = ApiError;
 
