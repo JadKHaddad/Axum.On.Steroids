@@ -16,10 +16,7 @@ use crate::{
     error::ErrorVerbosity,
     jwt::JwkRefresher,
     middleware::{
-        basic_auth::{layer::BasicAuthLayer, provider::DummyAuthProvider},
-        method_not_allowed::method_not_allowed,
-        not_found,
-        trace_headers::trace_headers,
+        method_not_allowed::method_not_allowed, not_found, trace_headers::trace_headers,
         trace_response_body::trace_response_body,
     },
     openid_configuration::OpenIdConfiguration,
