@@ -8,6 +8,10 @@ use jsonwebtoken::{
 use serde::de::DeserializeOwned;
 use tokio::sync::RwLock;
 
+pub trait JwkProvider {
+    fn jwk_refresher(&self) -> &JwkRefresher;
+}
+
 #[derive(Debug, thiserror::Error)]
 pub enum JwkError {
     #[error("Failed to fetch Jwk from the Jwks URI: {0}")]

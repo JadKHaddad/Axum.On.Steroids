@@ -3,20 +3,12 @@ use std::{ops::Deref, sync::Arc};
 use crate::error::ErrorVerbosityProvider;
 use crate::extractor::api_key::ApiKeyProvider;
 use crate::extractor::basic_auth::BasicAuthProvider;
-use crate::jwt::JwkRefresher;
+use crate::jwt::{JwkProvider, JwkRefresher};
 
 use crate::{
     error::ErrorVerbosity,
     types::{used_api_key::UsedApiKey, used_basic_auth::UsedBasicAuth},
 };
-
-/// Describes our state to axum.
-///
-/// This trait is crate private and therefore has no unnecessary generics.
-pub trait StateProvider {
-    /// Validates the JWT returning the claims.
-    fn jwk_refresher(&self) -> &JwkRefresher;
-}
 
 #[derive(Clone)]
 pub struct ApiState {
@@ -94,7 +86,7 @@ impl BasicAuthProvider for ApiState {
     }
 }
 
-impl StateProvider for ApiState {
+impl JwkProvider for ApiState {
     fn jwk_refresher(&self) -> &JwkRefresher {
         &self.jwk_refresher
     }

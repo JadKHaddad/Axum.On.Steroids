@@ -1,8 +1,6 @@
 use axum::{async_trait, extract::FromRequestParts, http::request::Parts};
 use std::convert::Infallible;
 
-use crate::state::StateProvider;
-
 /// Extracts an optional extractor from the request.
 ///
 /// This Extractors never fails, it will always return `None` if the inner extractor fails.
@@ -12,7 +10,7 @@ pub struct Optional<X>(pub Option<X>);
 impl<X, S> FromRequestParts<S> for Optional<X>
 where
     X: FromRequestParts<S>,
-    S: Send + Sync + StateProvider,
+    S: Send + Sync,
 {
     type Rejection = Infallible;
 

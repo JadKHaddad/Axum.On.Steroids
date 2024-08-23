@@ -6,7 +6,7 @@ use serde::de::DeserializeOwned;
 use crate::{
     error::{ApiError, ErrorVerbosityProvider, JwtError, JwtErrorType},
     extractor::bearer_token::ApiBearerToken,
-    state::StateProvider,
+    jwt::JwkProvider,
     types::used_bearer_token::UsedBearerToken,
 };
 
@@ -18,7 +18,7 @@ pub struct ApiJwt<C>(pub C);
 impl<C, S> FromRequestParts<S> for ApiJwt<C>
 where
     C: DeserializeOwned + Debug,
-    S: Send + Sync + StateProvider + ErrorVerbosityProvider,
+    S: Send + Sync + JwkProvider + ErrorVerbosityProvider,
 {
     type Rejection = ApiError;
 
