@@ -10,6 +10,11 @@ use crate::{
     types::used_basic_auth::UsedBasicAuth,
 };
 
+pub trait BasicAuthProvider {
+    /// Authenticates the basic auth.
+    fn basic_auth_authenticate(&self, username: &str, password: Option<&str>) -> bool;
+}
+
 /// Extracts the basic auth from the request headers.
 #[derive(Debug, Clone)]
 pub struct ApiBasicAuth(pub UsedBasicAuth);

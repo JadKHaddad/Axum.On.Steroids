@@ -2,11 +2,10 @@ use axum::{async_trait, extract::FromRequestParts, http::request::Parts};
 
 use crate::{
     error::{ApiError, BasicAuthError, BasicAuthErrorType, ErrorVerbosityProvider},
-    state::StateProvider,
     types::used_basic_auth::UsedBasicAuth,
 };
 
-use super::basic_auth::ApiBasicAuth;
+use super::basic_auth::{ApiBasicAuth, BasicAuthProvider};
 
 /// Extracts and authenticates the basic auth from the request headers.
 #[derive(Debug, Clone)]
@@ -15,7 +14,7 @@ pub struct ApiAuthenticatedBasicAuth(pub UsedBasicAuth);
 #[async_trait]
 impl<S> FromRequestParts<S> for ApiAuthenticatedBasicAuth
 where
-    S: Send + Sync + StateProvider + ErrorVerbosityProvider,
+    S: Send + Sync + BasicAuthProvider + ErrorVerbosityProvider,
 {
     type Rejection = ApiError;
 
