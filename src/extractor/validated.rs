@@ -5,10 +5,7 @@ use axum::{
 };
 use validator::Validate;
 
-use crate::{
-    error::{ApiError, ValidationError},
-    state::StateProvider,
-};
+use crate::error::{ApiError, ErrorVerbosityProvider, ValidationError};
 
 use super::Extractor;
 
@@ -19,7 +16,7 @@ impl<X> Validated<X> {
     fn extract<S>(inner: X, state: &S) -> Result<Self, ApiError>
     where
         X: Extractor,
-        S: StateProvider,
+        S: ErrorVerbosityProvider,
         <X as Extractor>::Extracted: Validate,
     {
         let extracted = inner.extracted();
@@ -47,7 +44,7 @@ where
     X: FromRequestParts<S, Rejection = ApiError>,
     X: Extractor,
     <X as Extractor>::Extracted: Validate,
-    S: Send + Sync + StateProvider,
+    S: Send + Sync + ErrorVerbosityProvider,
 {
     type Rejection = ApiError;
 
@@ -65,7 +62,7 @@ where
     X: FromRequest<S, Rejection = ApiError>,
     X: Extractor,
     <X as Extractor>::Extracted: Validate,
-    S: Send + Sync + StateProvider,
+    S: Send + Sync + ErrorVerbosityProvider,
 {
     type Rejection = ApiError;
 

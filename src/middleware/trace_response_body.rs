@@ -6,12 +6,12 @@ use axum::{
 };
 use http_body_util::BodyExt;
 
-use crate::{error::ApiError, state::StateProvider};
+use crate::error::{ApiError, ErrorVerbosityProvider};
 
 /// Middlware to trace the response body.
 ///
 /// This is a very expensive middleware, since it reads the entire response body and logs it.
-pub async fn trace_response_body<S: StateProvider>(
+pub async fn trace_response_body<S: ErrorVerbosityProvider>(
     State(state): State<S>,
     req: Request,
     next: Next,

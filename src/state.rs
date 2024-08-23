@@ -1,5 +1,6 @@
 use std::{ops::Deref, sync::Arc};
 
+use crate::error::ErrorVerbosityProvider;
 use crate::jwt::JwkRefresher;
 
 use crate::{
@@ -11,9 +12,6 @@ use crate::{
 ///
 /// This trait is crate private and therefore has no unnecessary generics.
 pub trait StateProvider {
-    /// Returns the error verbosity.
-    fn error_verbosity(&self) -> ErrorVerbosity;
-
     /// Returns the API key header name.
     fn api_key_header_name(&self) -> &str;
 
@@ -69,11 +67,13 @@ pub struct ApiStateInner {
     jwk_refresher: JwkRefresher,
 }
 
-impl StateProvider for ApiState {
+impl ErrorVerbosityProvider for ApiState {
     fn error_verbosity(&self) -> ErrorVerbosity {
         self.error_verbosity
     }
+}
 
+impl StateProvider for ApiState {
     fn api_key_header_name(&self) -> &str {
         &self.api_key_header_name
     }

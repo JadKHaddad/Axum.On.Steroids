@@ -5,8 +5,7 @@ use axum::{
 };
 
 use crate::{
-    error::{ApiError, BearerError, BearerErrorType, ErrorVerbosity},
-    state::StateProvider,
+    error::{ApiError, BearerError, BearerErrorType, ErrorVerbosity, ErrorVerbosityProvider},
     types::used_bearer_token::UsedBearerToken,
 };
 
@@ -55,7 +54,7 @@ impl ApiBearerToken {
 #[async_trait]
 impl<S> FromRequestParts<S> for ApiBearerToken
 where
-    S: Send + Sync + StateProvider,
+    S: Send + Sync + ErrorVerbosityProvider,
 {
     type Rejection = ApiError;
 

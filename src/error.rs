@@ -19,6 +19,11 @@ use validator::ValidationErrors;
 
 use crate::jwt::JwtValidationError;
 
+pub trait ErrorVerbosityProvider {
+    /// Returns the error verbosity.
+    fn error_verbosity(&self) -> ErrorVerbosity;
+}
+
 // FIXME: Must not be public to all routes, to prevent defining arbitrary error verbosity.
 // Create PrivateErrorVerbosity in state.rs. and use it as input here.
 // TODO: add a RandomStatus code that returns only a random status code.

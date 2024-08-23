@@ -7,10 +7,8 @@ use axum::{
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use crate::state::StateProvider;
-
 use crate::{
-    error::{ResourceError, ResourceErrorProvider},
+    error::{ErrorVerbosityProvider, ResourceError, ResourceErrorProvider},
     extractor::query::ApiQuery,
     state::ApiState,
 };

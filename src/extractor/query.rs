@@ -7,10 +7,7 @@ use schemars::JsonSchema;
 use serde::de::DeserializeOwned;
 use std::fmt::Debug;
 
-use crate::{
-    error::{ApiError, QueryError},
-    state::StateProvider,
-};
+use crate::error::{ApiError, ErrorVerbosityProvider, QueryError};
 
 use super::Extractor;
 
@@ -23,7 +20,7 @@ pub struct ApiQuery<T>(pub T);
 impl<T, S> FromRequestParts<S> for ApiQuery<T>
 where
     T: DeserializeOwned + JsonSchema + Debug + Send,
-    S: Send + Sync + StateProvider,
+    S: Send + Sync + ErrorVerbosityProvider,
 {
     type Rejection = ApiError;
 

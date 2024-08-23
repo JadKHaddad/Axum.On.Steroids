@@ -6,8 +6,7 @@ use axum::{
 use base64::Engine;
 
 use crate::{
-    error::{ApiError, BasicAuthError, BasicAuthErrorType, ErrorVerbosity},
-    state::StateProvider,
+    error::{ApiError, BasicAuthError, BasicAuthErrorType, ErrorVerbosity, ErrorVerbosityProvider},
     types::used_basic_auth::UsedBasicAuth,
 };
 
@@ -96,7 +95,7 @@ impl ApiBasicAuth {
 #[async_trait]
 impl<S> FromRequestParts<S> for ApiBasicAuth
 where
-    S: Send + Sync + StateProvider,
+    S: Send + Sync + ErrorVerbosityProvider,
 {
     type Rejection = ApiError;
 

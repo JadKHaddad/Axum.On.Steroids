@@ -4,7 +4,7 @@ use axum::{async_trait, extract::FromRequestParts, http::request::Parts};
 use serde::de::DeserializeOwned;
 
 use crate::{
-    error::{ApiError, JwtError, JwtErrorType},
+    error::{ApiError, ErrorVerbosityProvider, JwtError, JwtErrorType},
     extractor::bearer_token::ApiBearerToken,
     state::StateProvider,
     types::used_bearer_token::UsedBearerToken,
@@ -18,7 +18,7 @@ pub struct ApiJwt<C>(pub C);
 impl<C, S> FromRequestParts<S> for ApiJwt<C>
 where
     C: DeserializeOwned + Debug,
-    S: Send + Sync + StateProvider,
+    S: Send + Sync + StateProvider + ErrorVerbosityProvider,
 {
     type Rejection = ApiError;
 
