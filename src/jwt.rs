@@ -8,6 +8,7 @@ use jsonwebtoken::{
 use serde::de::DeserializeOwned;
 use tokio::sync::RwLock;
 
+// TODO: rework like BasicAuthProvider and ApiKeyProvider
 pub trait JwkProvider {
     fn jwk_refresher(&self) -> &JwkRefresher;
 }

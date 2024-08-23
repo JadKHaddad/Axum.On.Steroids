@@ -1,8 +1,8 @@
 use std::{ops::Deref, sync::Arc};
 
 use crate::error::ErrorVerbosityProvider;
-use crate::extractor::api_key::ApiKeyProvider;
-use crate::extractor::basic_auth::BasicAuthProvider;
+use crate::extractor::api_key::{ApiKeyProvider, ApiKeyProviderError};
+use crate::extractor::basic_auth::{BasicAuthProvider, BasicAuthProviderError};
 use crate::jwt::{JwkProvider, JwkRefresher};
 
 use crate::{
@@ -59,30 +59,34 @@ impl ErrorVerbosityProvider for ApiState {
 }
 
 impl ApiKeyProvider for ApiState {
-    fn api_key_header_name(&self) -> &str {
+    fn header_name(&self) -> &str {
         &self.api_key_header_name
     }
 
-    fn api_key_validate(&self, key: &str) -> bool {
+    async fn validate(&self, key: &str) -> Result<(), ApiKeyProviderError> {
         for valid_key in self.api_keys.iter() {
             if valid_key.value == key {
-                return true;
+                return Ok(());
             }
         }
 
-        false
+        Err(ApiKeyProviderError::Invalid)
     }
 }
 
 impl BasicAuthProvider for ApiState {
-    fn basic_auth_authenticate(&self, username: &str, password: Option<&str>) -> bool {
+    async fn authenticate(
+        &self,
+        username: &str,
+        password: Option<&str>,
+    ) -> Result<(), BasicAuthProviderError> {
         for valid_user in self.basic_auth_users.iter() {
             if valid_user.username == username && valid_user.password.as_deref() == password {
-                return true;
+                return Ok(());
             }
         }
 
-        false
+        Err(BasicAuthProviderError::Unauthenticated)
     }
 }
 

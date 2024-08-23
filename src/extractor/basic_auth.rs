@@ -1,3 +1,5 @@
+use std::future::Future;
+
 use axum::{
     async_trait,
     extract::FromRequestParts,
@@ -10,9 +12,21 @@ use crate::{
     types::used_basic_auth::UsedBasicAuth,
 };
 
+#[derive(Debug, thiserror::Error)]
+pub enum BasicAuthProviderError {
+    #[error("Unauthenticated")]
+    Unauthenticated,
+    #[error(transparent)]
+    InternalServerError(#[from] anyhow::Error),
+}
+
 pub trait BasicAuthProvider {
     /// Authenticates the basic auth.
-    fn basic_auth_authenticate(&self, username: &str, password: Option<&str>) -> bool;
+    fn authenticate(
+        &self,
+        username: &str,
+        password: Option<&str>,
+    ) -> impl Future<Output = Result<(), BasicAuthProviderError>> + Send;
 }
 
 /// Extracts the basic auth from the request headers.

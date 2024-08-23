@@ -1,8 +1,8 @@
 use axum::{async_trait, extract::FromRequestParts, http::request::Parts};
 
 use crate::{
-    error::{ApiError, ApiKeyError, ApiKeyErrorType, ErrorVerbosityProvider},
-    extractor::api_key::ApiKey,
+    error::{ApiError, ApiKeyError, ApiKeyErrorType, ErrorVerbosityProvider, InternalServerError},
+    extractor::api_key::{ApiKey, ApiKeyProviderError},
     types::used_api_key::UsedApiKey,
 };
 
@@ -26,11 +26,18 @@ where
         let ApiKey(UsedApiKey { value: api_key }) =
             ApiKey::from_request_parts(parts, state).await?;
 
-        if !state.api_key_validate(&api_key) {
+        state.validate(&api_key).await.map_err(|err| {
             tracing::warn!(%api_key, "Rejection. Invalid API key");
 
-            return Err(ApiKeyError::new(verbosity, ApiKeyErrorType::Invalid).into());
-        }
+            match err {
+                ApiKeyProviderError::Invalid => {
+                    ApiError::ApiKey(ApiKeyError::new(verbosity, ApiKeyErrorType::Invalid))
+                }
+                ApiKeyProviderError::InternalServerError(err) => ApiError::InternalServerError(
+                    InternalServerError::from_generic_error(verbosity, err),
+                ),
+            }
+        })?;
 
         tracing::trace!(%api_key, "Validated");
 

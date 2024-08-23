@@ -1,3 +1,5 @@
+use std::future::Future;
+
 use axum::{async_trait, extract::FromRequestParts, http::request::Parts};
 
 use crate::{
@@ -5,12 +7,20 @@ use crate::{
     types::used_api_key::UsedApiKey,
 };
 
+#[derive(Debug, thiserror::Error)]
+pub enum ApiKeyProviderError {
+    #[error("Invalid")]
+    Invalid,
+    #[error(transparent)]
+    InternalServerError(#[from] anyhow::Error),
+}
+
 pub trait ApiKeyProvider {
     /// Returns the API key header name.
-    fn api_key_header_name(&self) -> &str;
+    fn header_name(&self) -> &str;
 
     /// Validates the API key.
-    fn api_key_validate(&self, key: &str) -> bool;
+    fn validate(&self, key: &str) -> impl Future<Output = Result<(), ApiKeyProviderError>> + Send;
 }
 
 /// Extracts the API key from the request headers.
@@ -28,7 +38,7 @@ where
     async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
         let verbosity = state.error_verbosity();
 
-        let header_name = state.api_key_header_name();
+        let header_name = state.header_name();
         let headers = &parts.headers;
 
         let api_key = headers

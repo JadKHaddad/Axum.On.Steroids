@@ -1,7 +1,10 @@
 use axum::{async_trait, extract::FromRequestParts, http::request::Parts};
 
 use crate::{
-    error::{ApiError, BasicAuthError, BasicAuthErrorType, ErrorVerbosityProvider},
+    error::{
+        ApiError, BasicAuthError, BasicAuthErrorType, ErrorVerbosityProvider, InternalServerError,
+    },
+    extractor::basic_auth::BasicAuthProviderError,
     types::used_basic_auth::UsedBasicAuth,
 };
 
@@ -25,11 +28,23 @@ where
         let ApiBasicAuth(UsedBasicAuth { username, password }) =
             ApiBasicAuth::from_request_parts(parts, state).await?;
 
-        if !state.basic_auth_authenticate(&username, password.as_deref()) {
-            tracing::warn!(%username, "Rejection. Invalid basic auth");
+        state
+            .authenticate(&username, password.as_deref())
+            .await
+            .map_err(|err| {
+                tracing::warn!(%username, "Rejection. Invalid basic auth");
 
-            return Err(BasicAuthError::new(verbosity, BasicAuthErrorType::Invalid).into());
-        }
+                match err {
+                    BasicAuthProviderError::Unauthenticated => ApiError::BasicAuth(
+                        BasicAuthError::new(verbosity, BasicAuthErrorType::Invalid),
+                    ),
+                    BasicAuthProviderError::InternalServerError(err) => {
+                        ApiError::InternalServerError(InternalServerError::from_generic_error(
+                            verbosity, err,
+                        ))
+                    }
+                }
+            })?;
 
         tracing::trace!(%username, "Authenticated");
 
