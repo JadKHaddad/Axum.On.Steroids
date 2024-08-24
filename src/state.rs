@@ -1,3 +1,4 @@
+use std::convert::Infallible;
 use std::{ops::Deref, sync::Arc};
 
 use crate::error::ErrorVerbosityProvider;
@@ -59,11 +60,13 @@ impl ErrorVerbosityProvider for ApiState {
 }
 
 impl ApiKeyProvider for ApiState {
+    type Error = Infallible;
+
     fn header_name(&self) -> &str {
         &self.api_key_header_name
     }
 
-    async fn validate(&self, key: &str) -> Result<(), ApiKeyProviderError> {
+    async fn validate(&self, key: &str) -> Result<(), ApiKeyProviderError<Self::Error>> {
         for valid_key in self.api_keys.iter() {
             if valid_key.value == key {
                 return Ok(());
@@ -75,11 +78,13 @@ impl ApiKeyProvider for ApiState {
 }
 
 impl BasicAuthProvider for ApiState {
+    type Error = Infallible;
+
     async fn authenticate(
         &self,
         username: &str,
         password: Option<&str>,
-    ) -> Result<(), BasicAuthProviderError> {
+    ) -> Result<(), BasicAuthProviderError<Self::Error>> {
         for valid_user in self.basic_auth_users.iter() {
             if valid_user.username == username && valid_user.password.as_deref() == password {
                 return Ok(());

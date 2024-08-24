@@ -16,6 +16,7 @@ pub struct ValidApiKey(pub UsedApiKey);
 impl<S> FromRequestParts<S> for ValidApiKey
 where
     S: Send + Sync + ApiKeyProvider + ErrorVerbosityProvider,
+    <S as ApiKeyProvider>::Error: Into<anyhow::Error>,
 {
     type Rejection = ApiError;
 

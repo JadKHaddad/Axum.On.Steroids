@@ -18,6 +18,7 @@ pub struct ApiAuthenticatedBasicAuth(pub UsedBasicAuth);
 impl<S> FromRequestParts<S> for ApiAuthenticatedBasicAuth
 where
     S: Send + Sync + BasicAuthProvider + ErrorVerbosityProvider,
+    <S as BasicAuthProvider>::Error: Into<anyhow::Error>,
 {
     type Rejection = ApiError;
 

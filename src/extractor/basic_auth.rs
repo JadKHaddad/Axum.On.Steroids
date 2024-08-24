@@ -13,20 +13,22 @@ use crate::{
 };
 
 #[derive(Debug, thiserror::Error)]
-pub enum BasicAuthProviderError {
+pub enum BasicAuthProviderError<E> {
     #[error("Unauthenticated")]
     Unauthenticated,
     #[error(transparent)]
-    InternalServerError(#[from] anyhow::Error),
+    InternalServerError(#[from] E),
 }
 
 pub trait BasicAuthProvider {
+    type Error;
+
     /// Authenticates the basic auth.
     fn authenticate(
         &self,
         username: &str,
         password: Option<&str>,
-    ) -> impl Future<Output = Result<(), BasicAuthProviderError>> + Send;
+    ) -> impl Future<Output = Result<(), BasicAuthProviderError<Self::Error>>> + Send;
 }
 
 /// Extracts the basic auth from the request headers.

@@ -8,19 +8,24 @@ use crate::{
 };
 
 #[derive(Debug, thiserror::Error)]
-pub enum ApiKeyProviderError {
+pub enum ApiKeyProviderError<E> {
     #[error("Invalid")]
     Invalid,
     #[error(transparent)]
-    InternalServerError(#[from] anyhow::Error),
+    InternalServerError(#[from] E),
 }
 
 pub trait ApiKeyProvider {
+    type Error;
+
     /// Returns the API key header name.
     fn header_name(&self) -> &str;
 
     /// Validates the API key.
-    fn validate(&self, key: &str) -> impl Future<Output = Result<(), ApiKeyProviderError>> + Send;
+    fn validate(
+        &self,
+        key: &str,
+    ) -> impl Future<Output = Result<(), ApiKeyProviderError<Self::Error>>> + Send;
 }
 
 /// Extracts the API key from the request headers.
