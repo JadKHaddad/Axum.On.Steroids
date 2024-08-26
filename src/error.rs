@@ -17,7 +17,7 @@ use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 use validator::ValidationErrors;
 
-use crate::jwt::JwtValidationError;
+use crate::extractor::jwt::validation::JwtValidationError;
 
 pub trait ErrorVerbosityProvider {
     /// Returns the error verbosity.

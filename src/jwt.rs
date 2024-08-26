@@ -1,17 +1,10 @@
-use std::{str::FromStr, time::Instant};
+use std::time::Instant;
 
-use jsonwebtoken::{
-    decode, decode_header,
-    jwk::{AlgorithmParameters, JwkSet, KeyAlgorithm},
-    Algorithm, DecodingKey, Validation,
-};
+use jsonwebtoken::jwk::JwkSet;
 use serde::de::DeserializeOwned;
 use tokio::sync::RwLock;
 
-// TODO: rework like BasicAuthProvider and ApiKeyProvider
-pub trait JwkProvider {
-    fn jwk_refresher(&self) -> &JwkRefresher;
-}
+use crate::extractor::jwt::{validation::JwtValidator, JwtProvider, JwtProviderError};
 
 #[derive(Debug, thiserror::Error)]
 pub enum JwkError {
@@ -94,44 +87,31 @@ impl JwkRefresher {
 
         Ok(&self.holder)
     }
+}
 
-    pub async fn jwt_validate<C>(&self, jwt: &str) -> Result<C, JwtValidationError>
+impl JwtProvider for JwkRefresher {
+    type Error = JwkError;
+
+    async fn validate<C>(&self, jwt: &str) -> Result<C, JwtProviderError<Self::Error>>
     where
         C: DeserializeOwned,
     {
-        let jwks_guard = self.get().await?.read().await;
-        let jwks = jwks_guard.jwks();
+        let jwks_guard = self
+            .get()
+            .await
+            .map_err(JwtProviderError::InternalServerError)?
+            .read()
+            .await;
 
-        let header = decode_header(jwt).map_err(JwtValidationError::DecodeHeader)?;
-        let kid = header.kid.ok_or(JwtValidationError::NoKid)?;
+        let jwks = jwks_guard.as_ref();
 
-        let jwk = jwks
-            .find(&kid)
-            .ok_or(JwtValidationError::NoMatchingJWK { kid })?;
-        let AlgorithmParameters::RSA(ref rsa) = jwk.algorithm else {
-            return Err(JwtValidationError::UnsupportedAlgorithm);
-        };
-
-        let decoding_key = DecodingKey::from_rsa_components(&rsa.n, &rsa.e)
-            .map_err(JwtValidationError::DecodingKey)?;
-
-        let key_algorithm = jwk
-            .common
-            .key_algorithm
-            .ok_or(JwtValidationError::KeyAlgorithmNotFound)?;
-
-        let mut validation = Validation::new(
-            Algorithm::from_str(key_algorithm.to_string().as_str())
-                .map_err(|err| JwtValidationError::ValidationAlgorithm { key_algorithm, err })?,
-        );
-
-        validation.set_audience(&self.audience);
-        validation.set_issuer(&[&self.issuer]);
-        validation.validate_nbf = true;
-
-        let token_data = decode::<C>(jwt, &decoding_key, &validation)?;
-
-        Ok(token_data.claims)
+        Ok(JwtValidator::validate(
+            jwt,
+            jwks,
+            &self.audience,
+            &[&self.issuer],
+            true,
+        )?)
     }
 }
 
@@ -140,46 +120,8 @@ pub struct JwkHolder {
     jwks: JwkSet,
 }
 
-impl JwkHolder {
-    pub fn jwks(&self) -> &JwkSet {
+impl AsRef<JwkSet> for JwkHolder {
+    fn as_ref(&self) -> &JwkSet {
         &self.jwks
-    }
-}
-
-#[derive(Debug, thiserror::Error)]
-pub enum JwtValidationError {
-    #[error("Error getting jwks: {0}")]
-    Jwks(#[from] JwkError),
-    #[error("Error decoding header: {0}")]
-    DecodeHeader(#[source] jsonwebtoken::errors::Error),
-    #[error("Token doesn't have a kid header field")]
-    NoKid,
-    #[error("No matching JWK found for the given kid: {kid}")]
-    NoMatchingJWK { kid: String },
-    #[error("JWK algorithm is not supported")]
-    UnsupportedAlgorithm,
-    #[error("Error creating decoding key: {0}")]
-    DecodingKey(#[source] jsonwebtoken::errors::Error),
-    #[error("No key algorithm found in JWK")]
-    KeyAlgorithmNotFound,
-    #[error("Error creating validation algorithm from Key Algorithm: {key_algorithm}, {err}")]
-    ValidationAlgorithm {
-        key_algorithm: KeyAlgorithm,
-        #[source]
-        err: jsonwebtoken::errors::Error,
-    },
-    #[error("Error validating token: {0}")]
-    TokenInvalid(#[from] jsonwebtoken::errors::Error),
-}
-
-impl JwtValidationError {
-    pub fn is_expired(&self) -> bool {
-        match self {
-            JwtValidationError::TokenInvalid(err) => matches!(
-                err.kind(),
-                jsonwebtoken::errors::ErrorKind::ExpiredSignature
-            ),
-            _ => false,
-        }
     }
 }

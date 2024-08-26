@@ -1,10 +1,14 @@
 use std::convert::Infallible;
+use std::future::Future;
 use std::{ops::Deref, sync::Arc};
+
+use serde::de::DeserializeOwned;
 
 use crate::error::ErrorVerbosityProvider;
 use crate::extractor::api_key::{ApiKeyProvider, ApiKeyProviderError};
 use crate::extractor::basic_auth::{BasicAuthProvider, BasicAuthProviderError};
-use crate::jwt::{JwkProvider, JwkRefresher};
+use crate::extractor::jwt::{JwtProvider, JwtProviderError};
+use crate::jwt::{JwkError, JwkRefresher};
 
 use crate::{
     error::ErrorVerbosity,
@@ -95,8 +99,16 @@ impl BasicAuthProvider for ApiState {
     }
 }
 
-impl JwkProvider for ApiState {
-    fn jwk_refresher(&self) -> &JwkRefresher {
-        &self.jwk_refresher
+impl JwtProvider for ApiState {
+    type Error = JwkError;
+
+    fn validate<C>(
+        &self,
+        jwt: &str,
+    ) -> impl Future<Output = Result<C, JwtProviderError<Self::Error>>> + Send
+    where
+        C: DeserializeOwned,
+    {
+        self.jwk_refresher.validate::<C>(jwt)
     }
 }
