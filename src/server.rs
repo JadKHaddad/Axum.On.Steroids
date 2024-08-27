@@ -85,7 +85,7 @@ impl Server {
         let jwk_refresher = JwkRefresher::new(
             self.config.jwks_time_to_live_in_seconds,
             openid_config.jwks_uri.clone(),
-            openid_config.issuer,
+            vec![openid_config.issuer],
             self.config.audience,
             http_client,
         )

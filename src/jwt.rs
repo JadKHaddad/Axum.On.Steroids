@@ -1,10 +1,9 @@
 use std::time::Instant;
 
 use jsonwebtoken::jwk::JwkSet;
-use serde::de::DeserializeOwned;
 use tokio::sync::RwLock;
 
-use crate::extractor::jwt::{validation::JwtValidator, JwtProvider, JwtProviderError};
+use crate::extractor::jwt::JwksProvider;
 
 #[derive(Debug, thiserror::Error)]
 pub enum JwkError {
@@ -19,7 +18,7 @@ pub struct JwkRefresher {
     jwks_uri: String,
     http_client: reqwest::Client,
     holder: RwLock<JwkHolder>,
-    issuer: String,
+    issuer: Vec<String>,
     audience: Vec<String>,
 }
 
@@ -46,7 +45,7 @@ impl JwkRefresher {
     pub async fn new(
         time_to_live_in_seconds: u64,
         jwks_uri: String,
-        issuer: String,
+        issuer: Vec<String>,
         audience: Vec<String>,
         http_client: reqwest::Client,
     ) -> Result<Self, JwkError> {
@@ -89,32 +88,6 @@ impl JwkRefresher {
     }
 }
 
-impl JwtProvider for JwkRefresher {
-    type Error = JwkError;
-
-    async fn validate<C>(&self, jwt: &str) -> Result<C, JwtProviderError<Self::Error>>
-    where
-        C: DeserializeOwned,
-    {
-        let jwks_guard = self
-            .get()
-            .await
-            .map_err(JwtProviderError::InternalServerError)?
-            .read()
-            .await;
-
-        let jwks = jwks_guard.as_ref();
-
-        Ok(JwtValidator::validate(
-            jwt,
-            jwks,
-            &self.audience,
-            &[&self.issuer],
-            true,
-        )?)
-    }
-}
-
 pub struct JwkHolder {
     last_updated: Instant,
     jwks: JwkSet,
@@ -123,5 +96,42 @@ pub struct JwkHolder {
 impl AsRef<JwkSet> for JwkHolder {
     fn as_ref(&self) -> &JwkSet {
         &self.jwks
+    }
+}
+
+pub struct JwkReadGuard<'a>(tokio::sync::RwLockReadGuard<'a, JwkHolder>);
+
+impl<'a> JwkReadGuard<'a> {
+    pub fn new(inner: tokio::sync::RwLockReadGuard<'a, JwkHolder>) -> Self {
+        Self(inner)
+    }
+}
+
+impl<'a> AsRef<JwkSet> for JwkReadGuard<'a> {
+    fn as_ref(&self) -> &JwkSet {
+        self.0.as_ref()
+    }
+}
+
+impl JwksProvider for JwkRefresher {
+    type Error = JwkError;
+
+    async fn jwks(&self) -> Result<impl AsRef<jsonwebtoken::jwk::JwkSet>, Self::Error> {
+        let jwks_guard = self.get().await?.read().await;
+        let jwks_guard = JwkReadGuard::new(jwks_guard);
+
+        Ok(jwks_guard)
+    }
+
+    fn audience(&self) -> &[impl ToString] {
+        &self.audience
+    }
+
+    fn issuer(&self) -> &[impl ToString] {
+        &self.issuer
+    }
+
+    fn validate_nbf(&self) -> bool {
+        true
     }
 }

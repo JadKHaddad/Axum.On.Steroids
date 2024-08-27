@@ -2,12 +2,10 @@ use std::convert::Infallible;
 use std::future::Future;
 use std::{ops::Deref, sync::Arc};
 
-use serde::de::DeserializeOwned;
-
 use crate::error::ErrorVerbosityProvider;
 use crate::extractor::api_key::{ApiKeyProvider, ApiKeyProviderError};
 use crate::extractor::basic_auth::{BasicAuthProvider, BasicAuthProviderError};
-use crate::extractor::jwt::{JwtProvider, JwtProviderError};
+use crate::extractor::jwt::JwksProvider;
 use crate::jwt::{JwkError, JwkRefresher};
 
 use crate::{
@@ -99,16 +97,25 @@ impl BasicAuthProvider for ApiState {
     }
 }
 
-impl JwtProvider for ApiState {
+impl JwksProvider for ApiState {
     type Error = JwkError;
 
-    fn validate<C>(
+    fn jwks(
         &self,
-        jwt: &str,
-    ) -> impl Future<Output = Result<C, JwtProviderError<Self::Error>>> + Send
-    where
-        C: DeserializeOwned,
+    ) -> impl Future<Output = Result<impl AsRef<jsonwebtoken::jwk::JwkSet>, Self::Error>> + Send
     {
-        self.jwk_refresher.validate::<C>(jwt)
+        self.jwk_refresher.jwks()
+    }
+
+    fn audience(&self) -> &[impl ToString] {
+        self.jwk_refresher.audience()
+    }
+
+    fn issuer(&self) -> &[impl ToString] {
+        self.jwk_refresher.issuer()
+    }
+
+    fn validate_nbf(&self) -> bool {
+        self.jwk_refresher.validate_nbf()
     }
 }

@@ -5,33 +5,13 @@ use std::{
 
 use axum::{async_trait, extract::FromRequestParts, http::request::Parts};
 use serde::de::DeserializeOwned;
-use validation::JwtValidationError;
+use validation::JwtValidator;
 
 use crate::{
     error::{ApiError, ErrorVerbosityProvider, InternalServerError, JwtError, JwtErrorType},
     extractor::bearer_token::ApiBearerToken,
     types::used_bearer_token::UsedBearerToken,
 };
-
-#[derive(Debug, thiserror::Error)]
-pub enum JwtProviderError<E> {
-    #[error(transparent)]
-    Invalid(#[from] JwtValidationError),
-    #[error(transparent)]
-    InternalServerError(E),
-}
-
-pub trait JwtProvider {
-    type Error;
-
-    /// Validates the JWT token.
-    fn validate<C>(
-        &self,
-        jwt: &str,
-    ) -> impl Future<Output = Result<C, JwtProviderError<Self::Error>>> + Send
-    where
-        C: DeserializeOwned;
-}
 
 /// Extracts and validates the claims from the bearer JWT token.
 #[derive(Debug)]
@@ -41,8 +21,8 @@ pub struct ApiJwt<C>(pub C);
 impl<C, S> FromRequestParts<S> for ApiJwt<C>
 where
     C: DeserializeOwned + Debug,
-    S: Send + Sync + JwtProvider + ErrorVerbosityProvider,
-    <S as JwtProvider>::Error: Into<anyhow::Error> + Display,
+    S: Send + Sync + JwksProvider + ErrorVerbosityProvider,
+    <S as JwksProvider>::Error: Into<anyhow::Error> + Display,
 {
     type Rejection = ApiError;
 
@@ -53,25 +33,25 @@ where
         let ApiBearerToken(UsedBearerToken { value }) =
             ApiBearerToken::from_request_parts(parts, state).await?;
 
-        let claims = state.validate::<C>(&value).await.map_err(|err| {
+        let jwks = state.jwks().await.map_err(|err| {
+            ApiError::InternalServerError(InternalServerError::from_generic_error(verbosity, err))
+        })?;
+
+        let claims = JwtValidator::validate::<C, _, _>(
+            &value,
+            jwks.as_ref(),
+            state.audience(),
+            state.issuer(),
+            state.validate_nbf(),
+        )
+        .map_err(|err| {
             tracing::warn!(%err, "Rejection");
 
-            match err {
-                JwtProviderError::Invalid(err) => {
-                    if err.is_expired() {
-                        return ApiError::Jwt(JwtError::new(
-                            verbosity,
-                            JwtErrorType::ExpiredSignature,
-                        ));
-                    }
-
-                    ApiError::Jwt(JwtError::new(verbosity, JwtErrorType::Invalid { err }))
-                }
-
-                JwtProviderError::InternalServerError(err) => ApiError::InternalServerError(
-                    InternalServerError::from_generic_error(verbosity, err),
-                ),
+            if err.is_expired() {
+                return ApiError::Jwt(JwtError::new(verbosity, JwtErrorType::ExpiredSignature));
             }
+
+            ApiError::Jwt(JwtError::new(verbosity, JwtErrorType::Invalid { err }))
         })?;
 
         tracing::trace!(?claims, "Extracted");
@@ -176,19 +156,20 @@ pub mod validation {
     }
 }
 
-// TODO: maybe use something like this instead of JwtProvider
-// pub trait JwksProvider {
-//     type Error;
+pub trait JwksProvider {
+    type Error;
 
-//     /// Returns the JWK set.
-//     fn jwks<T: AsRef<JwkSet>>(&self) -> impl Future<Output = Result<T, Self::Error>> + Send;
+    /// Returns the JWK set.
+    fn jwks(
+        &self,
+    ) -> impl Future<Output = Result<impl AsRef<jsonwebtoken::jwk::JwkSet>, Self::Error>> + Send;
 
-//     /// Returns the audience.
-//     fn audience<T: ToString>(&self) -> &[T];
+    /// Returns the audience.
+    fn audience(&self) -> &[impl ToString];
 
-//     /// Returns the issuer.
-//     fn issuer<T: ToString>(&self) -> &[T];
+    /// Returns the issuer.
+    fn issuer(&self) -> &[impl ToString];
 
-//     /// Returns whether to validate the nbf claim.
-//     fn validate_nbf(&self) -> bool;
-// }
+    /// Returns whether to validate the nbf claim.
+    fn validate_nbf(&self) -> bool;
+}
